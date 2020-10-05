@@ -2,6 +2,12 @@
 #ifndef vseva_hh
 #define vseva_hh 1
 
+/*
+root -l -b -q make_channels.C
+root -l -b -q split.C
+root -l -b -q tmva_train.C
+*/
+
 namespace vseva {
 
   class DataSet {
@@ -20,6 +26,7 @@ namespace vseva {
 
     string process_name, latex_name, short_name, type, dataset_ttree_name;
     vector<string> files;
+    vector<string> sys_dataset_ttree_name;
     long long int nevents;
     double weight_sum, xsec;
     bool sys;
@@ -264,7 +271,8 @@ namespace vseva {
         int signal_color = 2;
 
         for(auto hist : signals){
-          hist->SetLineColor( signal_color++ );
+          // hist->SetLineColor( signal_color++ );
+          hist->SetLineColor( colors.at(color++) );
           hist->SetLineWidth( 5 );
           hist->SetLineStyle( 7 );
           SetStyleHist(hist);
@@ -330,8 +338,8 @@ namespace vseva {
         double maxh_v =  0.0;
         double minh_v = -1.0;
         for(auto hist : backgrounds ) maxh_v += hist->GetBinContent(hist->GetMaximumBin());
-        for(auto hist : signals     ) maxh_v = TMath::Max(maxh_v, hist->GetBinContent(hist->GetMaximumBin()));
-        for(auto hist : datas       ) maxh_v = TMath::Max(maxh_v, hist->GetBinContent(hist->GetMaximumBin()));
+        for(auto hist : signals     ) maxh_v  = TMath::Max(maxh_v, hist->GetBinContent(hist->GetMaximumBin()));
+        for(auto hist : datas       ) maxh_v  = TMath::Max(maxh_v, hist->GetBinContent(hist->GetMaximumBin()));
         if( logY ) {
           minh_v = 0.000001*maxh_v;
           maxh_v = 100000*maxh_v;
@@ -341,7 +349,7 @@ namespace vseva {
           maxh_v = 1.5*maxh_v;
         }
         SetMinMax(minh_v, maxh_v);
-        if( not hs->GetXaxis() or not hs->GetYaxis() or not hs->GetHistogram() ) return;
+        if( not backgrounds.size() ) return;
         hs->SetMinimum( minh_v );
         hs->SetMaximum( maxh_v );
       }
@@ -405,12 +413,12 @@ namespace vseva {
           hist->Scale( 0.50*sum_integral / hist->Integral() );
 
         SetMaximumStack( hs );
-        if( not hs->GetXaxis() or not hs->GetYaxis() or not hs->GetHistogram() ){
+        if( backgrounds.size() ) hs->Draw("hist");
+        else {
+          cout << "DrawHistsTMVA(): no backgrounds ... " << backgrounds.size() << endl; 
           if( signals.size()   )      signals.at(0)->Draw("hist");
           else if( datas.size()     )   datas.at(0)->Draw("hist");
-          else return; // FIXME
-        } else {
-          hs->Draw("hist");
+          else return;
         }
 
         for(auto hist : signals)
@@ -600,6 +608,7 @@ namespace vseva {
     string leftText  = "";
     string rightText = "";
            rightText = "CMS Preliminary";
+           rightText = "";
   
     cout << name << endl;
     drawer->Print();
@@ -690,6 +699,177 @@ namespace vseva {
     canvas->Update();
     canvas->Print( (path + "/" + name).c_str() );
     return canvas;
+  }
+
+  
+
+
+  //==========================================================================================================================
+  /*void draw_hist_from_two_ttrees(string var_name, TTree * tree_1, TTree * tree_2, string label_1, string label_2, string weight_1="1", string weight_2="1"){
+    // do not display any of the standard histogram decorations
+    gStyle->SetOptTitle(0);
+    gStyle->SetOptStat(0); //("m")
+    gStyle->SetOptFit(0);
+
+    TTreeFormula var_1f(var_name.c_str(), var_name.c_str(), tree_1);
+    TTreeFormula var_2f(var_name.c_str(), var_name.c_str(), tree_2);
+
+    TTreeFormula weight_1f(weight_1.c_str(), weight_1.c_str(), tree_1);
+    TTreeFormula weight_2f(weight_2.c_str(), weight_2.c_str(), tree_2);
+  }*/
+
+  void draw_hists_from_two_ttrees(TTree * tree_1, TTree * tree_2, string label_1, string label_2, string weight_1="1", string weight_2="1"){
+    // do not display any of the standard histogram decorations
+    gStyle->SetOptTitle(0);
+    gStyle->SetOptStat(0); //("m")
+    gStyle->SetOptFit(0);
+
+    int h_counter = 0;
+
+    /*
+    TTreeFormula weight_1_f(weigh_1.c_str(), weigh_1.c_str(), tree_1);
+    if( weight_1_f.GetNdim()==0){
+      cout << "Don't have a branch with name = " << weigh_1 << " " << tmva_name << endl;
+    }
+
+    TTreeFormula weight_2_f(weigh_2.c_str(), weigh_2.c_str(), tree_2);
+    if( weight_2_f.GetNdim()==0){
+      cout << "Don't have a branch with name = " << weigh_2 << " " << tmva_name << endl;
+    }
+    */
+
+    size_t n = tree_1->GetListOfBranches()->GetEntries();
+    cout << "draw_hists_from_two_ttrees(): Input ttrees " << tree_1 << " " << tree_2 << endl;
+    cout << " Process TTree " << tree_1->GetName() << endl;
+    TObjArray * branches_1 = tree_1->GetListOfBranches();
+    TObjArray * branches_2 = tree_2->GetListOfBranches();
+    for( size_t i = 0; i < branches_1->GetEntries(); ++ i ) {
+      TBranch *subbr_1 = dynamic_cast<TBranch*>(branches_1->At(i));
+      string name_1 = subbr_1->GetName();
+      cout << "  process branch \"" << subbr_1->GetName() << endl;
+
+      TBranch *subbr_2 = nullptr;
+      for( size_t j = 0; j < branches_2->GetEntries(); ++ j ) {
+        TBranch *subbr_temp = dynamic_cast<TBranch*>(branches_2->At(j));
+        string name_2 = subbr_temp->GetName();
+        if( name_1 != name_2 ) continue;
+        subbr_2 = subbr_temp;
+        break;
+      }
+
+      if( subbr_2 == nullptr ) {
+        cout << "  skip as second ttree dont have such variable" << endl;
+        continue;
+      }
+
+      vector<string> operators;
+      vector<string> names;
+      if(name_1.find("_tlv") != string::npos ){
+        operators.push_back( ".Pt()"  );
+        operators.push_back( ".Eta()" );
+        operators.push_back( ".Phi()" );
+        operators.push_back( ".M()" );
+        names.push_back( "_Pt"  );
+        names.push_back( "_Eta"  );
+        names.push_back( "_Phi"  );
+        names.push_back( "_M"  );
+      } else {
+        operators.push_back("");
+        names.push_back("");
+      }
+  
+      for(int k = 0; k < operators.size(); k++){
+        h_counter++;
+
+        string oper = operators.at(k);
+        string postfix  = names.at(k);
+        
+        tree_1->Draw( (name_1 + oper +" >> h_a_1" + to_string(h_counter) ).c_str(), weight_1.c_str() );
+        TH1* h_c_1 = ((TH1*)gPad->GetPrimitive( ("h_a_1" + to_string(h_counter)).c_str() ) ); // ->Clone(); 
+        TH1* h_a_1 = (TH1*) h_c_1->Clone(); 
+
+        tree_2->Draw( (name_1 + oper +" >> h_a_2" + to_string(h_counter)).c_str(), weight_2.c_str() );
+        TH1* h_c_2 = ((TH1*)gPad->GetPrimitive( ("h_a_2" + to_string(h_counter)).c_str() ) ); // ->Clone(); 
+        TH1* h_a_2 = (TH1*) h_c_2->Clone(); 
+
+        double min = TMath::Min( h_a_1->GetXaxis()->GetXmin(), h_a_2->GetXaxis()->GetXmin() );
+        double max = TMath::Max( h_a_1->GetXaxis()->GetXmax(), h_a_2->GetXaxis()->GetXmax() );
+        cout << min << " " << max << endl;
+
+        TH1D * h_b_1 = new TH1D("h_b_1", label_1.c_str(), h_a_1->GetNbinsX(), min, max);
+        TH1D * h_b_2 = new TH1D("h_b_2", label_2.c_str(), h_a_1->GetNbinsX(), min, max);
+
+        tree_1->Draw( (name_1 + oper +" >> h_b_1").c_str(), weight_1.c_str() );
+        tree_2->Draw( (name_1 + oper +" >> h_b_2").c_str(), weight_2.c_str() );
+
+        h_b_2->SetLineColor(2);
+        TCanvas * canv = new TCanvas("canv", "canv", 640, 480);
+        h_b_1->Draw("hist");
+        h_b_2->Draw("same");
+        h_b_1->GetXaxis()->SetTitle( (name_1 + oper).c_str() );
+
+        canv->BuildLegend();
+        
+
+        canv->Print( (name_1 + postfix + ".png").c_str() );
+      }
+    }
+  }
+
+  //==========================================================================================================================
+  void draw_correlations_from_two_ttrees(TTree * tree_1, TTree * tree_2, vector<string> variables, vector<string> labels){
+    int h_counter = 0;
+    cout << "draw_correlations_from_two_ttrees(): Input ttrees " << tree_1 << " " << tree_2 << endl;
+
+    cout << variables.size() << " " << labels.size() << endl;
+
+    for(int i = 0; i < variables.size(); i++){
+      for(int j = i+1; j < variables.size(); j++){
+        h_counter++;
+        string v1 = variables.at( i );
+        string v2 = variables.at( j );
+
+        string lab1 = labels.at( i );
+        string lab2 = labels.at( j );
+
+        cout << v1 << " " << lab1 << " " << v2 << " " << lab2 << endl;
+
+        tree_1->Draw( (v1 + ":" +v2 + " >> h_a_1" + to_string(h_counter) ).c_str() );
+        TH2* h_c_1 = ((TH2*)gPad->GetPrimitive( ("h_a_1" + to_string(h_counter)).c_str() ) );
+        TH2* h_a_1 = (TH2*) h_c_1->Clone(); 
+
+        tree_2->Draw( (v1 + ":" +v2 + " >> h_a_2" + to_string(h_counter) ).c_str() );
+        TH2* h_c_2 = ((TH2*)gPad->GetPrimitive( ("h_a_2" + to_string(h_counter)).c_str() ) );
+        TH2* h_a_2 = (TH2*) h_c_2->Clone(); 
+
+        double min_x = TMath::Min( h_a_1->GetXaxis()->GetXmin(), h_a_2->GetXaxis()->GetXmin() );
+        double max_x = TMath::Max( h_a_1->GetXaxis()->GetXmax(), h_a_2->GetXaxis()->GetXmax() );
+        double min_y = TMath::Min( h_a_1->GetYaxis()->GetXmin(), h_a_2->GetYaxis()->GetXmin() );
+        double max_y = TMath::Max( h_a_1->GetYaxis()->GetXmax(), h_a_2->GetYaxis()->GetXmax() );
+        cout << min_x << " " << max_x << " " << min_y << " " << max_y << endl;
+
+        TH2D * h_b_1 = new TH2D("h_b_1", "signal",     h_a_1->GetNbinsX(), min_x, max_x, h_a_1->GetNbinsY(), min_y, max_y);
+        TH2D * h_b_2 = new TH2D("h_b_2", "background", h_a_1->GetNbinsX(), min_x, max_x, h_a_1->GetNbinsY(), min_y, max_y);
+        tree_1->Draw( (v1 + ":" +v2 + " >> h_b_1" ).c_str() );
+        tree_2->Draw( (v1 + ":" +v2 + " >> h_b_2" ).c_str() );
+
+        // h_b_1->SetMarkerStyle( 20 );
+        // h_b_2->SetMarkerStyle( 21 );
+
+        // h_b_1->SetMarkerSize( 0.25 );
+        // h_b_2->SetMarkerSize( 0.25 );
+
+        HistDrawer<TH2D> * drawer = new HistDrawer<TH2D>();
+        drawer->Add(h_b_1, "S");
+        drawer->Add(h_b_2, "B");
+
+        drawer->label_y = lab1;
+        drawer->label_x = lab2;
+
+        //draw_hists_CMS( HistDrawer<T> * drawer, string path, string name, string label, string extra_title = "", string mode = "default"){
+        draw_hists_CMS(drawer, ".", to_string(h_counter) + ".png", "", "", "correlation");
+      }
+    }
   }
 
 };
