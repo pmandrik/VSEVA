@@ -2,6 +2,7 @@
 import ROOT
 from array import array
 import copy
+from hadd import *
 
 def get_CMS_EFT_benchmarks( name_, year_ ):
   name, year = str(name_), str(year_)
@@ -21,7 +22,7 @@ def get_CMS_EFT_benchmarks( name_, year_ ):
   if name ==  "10" : answer = [2.4, 1.0, 0.0, 1.0, -1.0]
   if name ==  "11" : answer = [15.0, 1.0, 1.0, 0.0, 0.0]
 
-  if year_ == 2017 and answer:
+  if year == "2017" and answer:
     answer[4] = 1.0
     answer[0], answer[1] = answer[1], answer[0]
   return answer
@@ -88,7 +89,7 @@ class ReweightCarvalho():
   def GetDiffXsection(self, m_hh, cos_theta, eft_parameters):
     kl, kt, c2, cg, c2g = eft_parameters
     if m_hh < 250 or cos_theta < 0: 
-      print "ReweightCarvalho.GetDiffXsection(): Warning, m_hh =", m_hh, "cos_theta =", cos_theta
+      # print "ReweightCarvalho.GetDiffXsection(): Warning, m_hh =", m_hh, "cos_theta =", cos_theta
       return 0
 
     sm_xsection = 16.60711696
@@ -107,7 +108,7 @@ class ReweightCarvalho():
         # print dm, dcos
         return self.analytical_formula(kl, kt, c2, cg, c2g, A_values) * A_values_[2] * sm_xsection / dm / dcos
         
-    print "ReweightCarvalho.GetDiffXsection(): Warning, m_hh =", m_hh, "cos_theta =", cos_theta, "out of range"
+    # print "ReweightCarvalho.GetDiffXsection(): Warning, m_hh =", m_hh, "cos_theta =", cos_theta, "out of range"
     return 0
 
   def GetXsection(self, eft_parameters):
@@ -139,9 +140,10 @@ class ReweightGudrin():
   def GetDiffXsection(self, m_hh, eft_parameters, order="nlo"):
     c3, ct, ctt, cg, cgg = eft_parameters
     if m_hh < 250 : 
-      print "ReweightGudrin.GetDiffXsection(): Warning, m_hh =", m_hh, "< 250"
+      # print "ReweightGudrin.GetDiffXsection(): Warning, m_hh =", m_hh, "< 250"
       return 0
 
+    print c3, ct, ctt, cg, cgg
     couplings = [ pow(ct,4), pow(ctt,2), pow(c3 * ct,2), pow(c3*cg,2), pow(cgg,2), ctt*pow(ct,2), pow(ct,3)*c3,
                   ct*c3*ctt, cg*c3*ctt, ctt*cgg, pow(ct,2)*cg*c3, pow(ct,2)*cgg, 
                   ct*pow(c3,2)*cg, ct*c3*cgg, cg*c3*cgg, 
@@ -158,9 +160,10 @@ class ReweightGudrin():
       if m_hh > mass : continue
       weight = 0
       for A, kappa in zip(item[1], couplings):
+        print A, kappa, A * kappa
         weight += A * kappa
       return weight
-    print "ReweightGudrin.GetDiffXsection(): Warning, m_hh =", m_hh, " out of mass range"
+    # print "ReweightGudrin.GetDiffXsection(): Warning, m_hh =", m_hh, " out of mass range"
     return 0;
 
   def GetXsection2(self, eft_parameters, order="nlo"):
@@ -269,94 +272,131 @@ def make_prediction_hist(r, r_old, benchmark_title):
   canv.Print( "out/"+str(benchmark_title)+".png" );
   return h0;
 
-def reweight_file(r_gudrin, r_carvalho, inp_file_name, inp_tree_name, inp_order, inp_benchmark_, out_file_name, out_benchmark_) :
-    inp_benchmark   = r_gudrin.GetEFTBenchmark( inp_benchmark_, 2017 )
-    out_benchmark   = r_gudrin.GetEFTBenchmark( out_benchmark_, 2017 )
+def reweight_file(inp_file_names, inp_tree_names, inp_orders, inp_benchmarks_, inp_factors, out_path, out_file_name) :
+    print "Reweight to", out_file_name
+    r_gudrin   = ReweightGudrin()
+    r_carvalho = ReweightCarvalho()
 
-    inp_benchmark_old   = r_carvalho.GetEFTBenchmark( inp_benchmark_, 2017 )
-    out_benchmark_old   = r_carvalho.GetEFTBenchmark( out_benchmark_, 2017 )
+    input_files = " "
+    import os
 
-    inp_file = ROOT.TFile( inp_file_name, "read")
-    inp_tree = inp_file.Get( inp_tree_name )
+    index = 0
+    for inp_file_name, inp_tree_name, inp_order, inp_benchmark_, factor in zip(inp_file_names, inp_tree_names, inp_orders, inp_benchmarks_, inp_factors):
+      print "Process ... ", inp_file_name, inp_tree_name, inp_order, inp_benchmark_
+      inp_benchmark   = r_gudrin.GetEFTBenchmark( inp_benchmark_, 2017 )
+      inp_benchmark_old   = r_carvalho.GetEFTBenchmark( inp_benchmark_, 2017 )
 
-    out_file = ROOT.TFile( out_file_name, "RECREATE")
-    out_tree = inp_tree.CopyTree("")
+      os.system('cp ' + inp_file_name + " " + out_path + "/tmp_" + str(index) + out_file_name )
+      inp_file_name = out_path + "/tmp_" + str(index) + out_file_name
+      input_files += " " + inp_file_name + " "
+      index += 1
 
-    weight_lo  = array( 'd', [ 0 ] )
-    weight_lo_carv  = array( 'd', [ 0 ] )
-    weight_nlo = array( 'd', [ 0 ] )
-    br_weight_lo  = out_tree.Branch('weight_lo',  weight_lo,  'weight_lo/D')
-    br_weight_lo_carv  = out_tree.Branch('weight_lo_carv',  weight_lo_carv,  'weight_lo_carv/D')
-    br_weight_nlo = out_tree.Branch('weight_nlo', weight_nlo, 'weight_nlo/D')
+      inp_file = ROOT.TFile( inp_file_name, "UPDATE")
+      inp_tree = inp_file.Get( inp_tree_name )
 
-    h0 = ROOT.TH1D("h0", "Reweight alt LO", (1050-250)/20, 250, 1050);
+      out_benchmark, out_benchmark_old = [], []
+      weight_lo, weight_lo_carv, weight_nlo = [], [], []
+      br_weight_lo, br_weight_lo_carv, br_weight_nlo = [], [], []
+      for i, mark in enumerate( ["SM", "box", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] ): 
+        out_benchmark       += [ r_gudrin.GetEFTBenchmark( mark, 2017 )   ]
+        out_benchmark_old   += [ r_carvalho.GetEFTBenchmark( mark, 2017 ) ]
 
-    for i, entry in enumerate(inp_tree):   
-      m_HH = entry.gen_HHi_tlv.M()
-      cos_theta = abs( entry.gen_Hi_yy_tlv.CosTheta() )
+        weight_lo       += [ array( 'd', [ 0 ] ) ]
+        weight_lo_carv  += [ array( 'd', [ 0 ] ) ]
+        weight_nlo      += [ array( 'd', [ 0 ] ) ]
+        br_weight_lo       += [ inp_tree.Branch('weight_lo_' + str(mark),  weight_lo[i],  'weight_lo_' + str(mark) + '/D') ]
+        br_weight_lo_carv  += [ inp_tree.Branch('weight_lo_carv_' + str(mark),  weight_lo_carv[i],  'weight_lo_carv_' + str(mark) + '/D') ]
+        br_weight_nlo      += [ inp_tree.Branch('weight_nlo_' + str(mark), weight_nlo[i], 'weight_nlo_' + str(mark) + '/D') ]
 
-      dx_inp = r_gudrin.GetDiffXsection( m_HH, inp_benchmark, inp_order );
-      dx_lo  = r_gudrin.GetDiffXsection( m_HH, out_benchmark, "lo" );
-      dx_nlo = r_gudrin.GetDiffXsection( m_HH, out_benchmark );
+      #inp_tree.SetBranchStatus("*", 0);
+      #inp_tree.SetBranchStatus("gen_HHi_tlv", 1);
+      #inp_tree.SetBranchStatus("gen_Hi_yy_tlv", 1);
+      for event_i, entry in enumerate(inp_tree):   
+        m_HH = entry.gen_HHi_tlv.M()
+        cos_theta = abs( entry.gen_Hi_yy_tlv.CosTheta() )
 
-      dx_inp_carv  = r_carvalho.GetDiffXsection( m_HH, cos_theta, inp_benchmark_old);
-      dx_lo_carv   = r_carvalho.GetDiffXsection( m_HH, cos_theta, out_benchmark_old);
+        dx_inp = r_gudrin.GetDiffXsection( m_HH, inp_benchmark, inp_order );
+        dx_inp_carv  = r_carvalho.GetDiffXsection( m_HH, cos_theta, inp_benchmark_old);
 
-      out_tree.GetEntry( i )
-      if dx_inp < 0.00000001 :
-        weight_lo[0]  = 0
-        weight_lo_carv[0] = 0
-        weight_nlo[0] = 0
-        br_weight_lo.Fill()
-        br_weight_nlo.Fill()
-        br_weight_lo_carv.Fill()
-      else :
-        h0.Fill( m_HH, dx_nlo  / dx_inp );
-        weight_lo[0]  = dx_lo  / dx_inp
-        weight_lo_carv[0] = dx_lo_carv / dx_inp_carv;
-        weight_nlo[0] = dx_nlo  / dx_inp
-        br_weight_lo.Fill()
-        br_weight_nlo.Fill()
-        br_weight_lo_carv.Fill()
-        #print i, dx_lo_carv / dx_inp_carv
+        inp_tree.GetEntry( event_i )
+        for i, mark in enumerate( ["SM", "box", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] ): 
+          dx_lo  = r_gudrin.GetDiffXsection( m_HH, out_benchmark[i], "lo" );
+          dx_nlo = r_gudrin.GetDiffXsection( m_HH, out_benchmark[i] );
+          dx_lo_carv   = r_carvalho.GetDiffXsection( m_HH, cos_theta, out_benchmark_old[i]);
 
-    #for i, e1 in enumerate(out_tree):
-    #  print i, e1.weight_lo_carv
+          if dx_inp < 0.00000001 :
+            weight_lo[i][0]  = 0
+            weight_lo_carv[i][0] = 0
+            weight_nlo[i][0] = 0
+          else :
+            weight_lo[i][0]  = factor * dx_lo  / dx_inp
+            weight_lo_carv[i][0] = factor * dx_lo_carv / dx_inp_carv;
+            weight_nlo[i][0] = factor * dx_nlo  / dx_inp
 
-    canv = ROOT.TCanvas("canv", "canv", 640, 480)
-    h0.Draw()
-    canv.Print( str(out_benchmark_)+"_lo_gudrin_alt.png" );
+          # print mark, out_benchmark[i], weight_nlo[i][0]
 
-    out_tree.Write()
-    out_file.Close()
+          br_weight_lo[i].Fill()
+          br_weight_nlo[i].Fill()
+          br_weight_lo_carv[i].Fill()
+
+      print inp_tree.GetEntries()
+      inp_tree.Write()
+      inp_file.Close()
+
+    import os
+    print 'hadd -f ' + out_path + out_file_name + input_files
+    os.system('hadd -f ' + out_path + out_file_name + input_files)
+
+    print "done! ... "
 
 if __name__ == "__main__" :
-  r = ReweightGudrin()
-  r_old = ReweightCarvalho()
+  import sys
 
-  if True :
+  r_gudrin   = ReweightGudrin();
+  print r_gudrin.GetDiffXsection(999, r_gudrin.GetEFTBenchmark("7", "2017"), "nlo" );
 
-    inp_path="/afs/cern.ch/work/p/pmandrik/dihiggs/8_mvanaluse/VSEVA/HHWWgg/output/chanels_sys/"
-    out_path="/afs/cern.ch/work/p/pmandrik/dihiggs/8_mvanaluse/VSEVA/HHWWgg/output/reweighted/"
+  if False :
 
-    for mark in ["SM", "box", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] :
-      #make_prediction_hist(r, r_old, mark)
-      #break
-      #print r.GetEFTBenchmark(mark), r_old.GetEFTBenchmark(mark)
-      a= r.GetXsection(r.GetEFTBenchmark(mark, 2017), "lo")
-      b= r.GetXsection2(r.GetEFTBenchmark(mark, 2017), "lo")
-      # print r.GetEFTBenchmark(mark)
-      # print r.GetEFTBenchmark(mark)[4], a/b
-      # print r.GetXsection(r.GetEFTBenchmark(mark), "lo"), r_old.GetXsection(r_old.GetEFTBenchmark(mark))
-      # continue
-      # make_prediction_hist(r, mark, "lo")
-      mark = str(mark)
-      fname = "hzura_2017_" + mark + "_v7_Def_Events_ch78.root"
-      if mark not in ["SM", "box"] :
-        fname = "hzura_2017_EFT" + mark + "_v7_Def_Events_ch78.root"
-      reweight_file(r, r_old, inp_path + "hzura_2017_SM_v7_Def_Events_ch78.root", "data", "lo", "SM", out_path + fname, mark)
-      #break
+    inp_path="/afs/cern.ch/work/p/pmandrik/dihiggs/8_mvanaluse/VSEVA/HHWWgg/output/chanels_sys_2017/"
+    out_path="/afs/cern.ch/work/p/pmandrik/dihiggs/8_mvanaluse/VSEVA/HHWWgg/output/reweighted_2017/"
 
+    for systematic in ["Def", "FNUFEBDown", "FNUFEBUp", "FNUFEEDown", "FNUFEEUp", "MCScaleGain1EBDown", "MCScaleGain1EBUp", "MCScaleGain6EBDown", "MCScaleGain6EBUp", "MCScaleHighR9EBDown", "MCScaleHighR9EBUp", "MCScaleHighR9EEDown", "MCScaleHighR9EEUp", "MCScaleLowR9EBDown", "MCScaleLowR9EBUp", "MCScaleLowR9EEDown", "MCScaleLowR9EEUp", "MCSmearHighR9EBPhiDown", "MCSmearHighR9EBPhiUp", "MCSmearHighR9EBRhoDown", "MCSmearHighR9EBRhoUp", "MCSmearHighR9EEPhiDown", "MCSmearHighR9EEPhiUp", "MCSmearHighR9EERhoDown", "MCSmearHighR9EERhoUp", "MCSmearLowR9EBPhiDown", "MCSmearLowR9EBPhiUp", "MCSmearLowR9EBRhoDown", "MCSmearLowR9EBRhoUp", "MCSmearLowR9EEPhiDown", "MCSmearLowR9EEPhiUp", "MCSmearLowR9EERhoDown", "MCSmearLowR9EERhoUp", "MaterialCentralBarrelDown", "MaterialCentralBarrelUp", "MaterialForwardDown", "MaterialForwardUp", "MaterialOuterBarrelDown", "MaterialOuterBarrelUp", "MvaShiftDown", "MvaShiftUp", "ShowerShapeHighR9EBDown", "ShowerShapeHighR9EBUp", "ShowerShapeHighR9EEDown", "ShowerShapeHighR9EEUp", "ShowerShapeLowR9EBDown", "ShowerShapeLowR9EBUp", "ShowerShapeLowR9EEDown", "ShowerShapeLowR9EEUp", "SigmaEOverEShiftDown", "SigmaEOverEShiftUp","JEC_AbsoluteUp", "JEC_AbsoluteDown", "JEC_Absolute_2017Up", "JEC_Absolute_2017Down", "JEC_BBEC1Up", "JEC_BBEC1Down", "JEC_BBEC1_2017Up", "JEC_BBEC1_2017Down", "JEC_EC2Up", "JEC_EC2Down", "JEC_EC2_2017Up", "JEC_EC2_2017Down", "JEC_FlavorQCDUp", "JEC_FlavorQCDDown", "JEC_HFUp", "JEC_HFDown", "JEC_HF_2017Up", "JEC_HF_2017Down", "JEC_RelativeBalUp", "JEC_RelativeBalDown", "JEC_RelativeSample_2017Up", "JEC_RelativeSample_2017Down", "UnclusteredMETUp", "UnclusteredMETDown"]:
+
+
+    # for systematic in ["Def"] : 
+
+        fname = "hzura_2017_EFT_all_v1_" + systematic + "_Events_ch78.root"
+
+        inp_files  = []
+        benchmarks = []
+        factors    = []
+        def add_node(file, bench, fact):
+          global inp_files
+          global benchmarks
+          global factors
+          inp_files  += [ file ]
+          benchmarks += [ bench ]
+          factors    += [ fact ]
+
+        add_node(inp_path + "hzura_2017_SM_fsim_v0_" + systematic + "_Events_ch78.root", "SM", 399773/1000000.)
+        add_node(inp_path + "hzura_2017_1_fsim_v0_"  + systematic + "_Events_ch78.root", 0 ,   387757/1000000.)
+        add_node(inp_path + "hzura_2017_2_fsim_v0_"  + systematic + "_Events_ch78.root", 1 ,   399742/1000000.)
+        add_node(inp_path + "hzura_2017_3_fsim_v0_"  + systematic + "_Events_ch78.root", 2 ,   399780/1000000.)
+        add_node(inp_path + "hzura_2017_4_fsim_v0_"  + systematic + "_Events_ch78.root", 3 ,   399752/1000000.)
+        add_node(inp_path + "hzura_2017_5_fsim_v0_"  + systematic + "_Events_ch78.root", 4 ,   365791/1000000.)
+        add_node(inp_path + "hzura_2017_6_fsim_v0_"  + systematic + "_Events_ch78.root", 5 ,   373777/1000000.)
+        add_node(inp_path + "hzura_2017_7_fsim_v0_"  + systematic + "_Events_ch78.root", 6 ,   377789/1000000.)
+        add_node(inp_path + "hzura_2017_9_fsim_v0_"  + systematic + "_Events_ch78.root", 8 ,   399735/1000000.)
+        add_node(inp_path + "hzura_2017_10_fsim_v0_"  + systematic + "_Events_ch78.root", 9 , 365788/1000000.)
+        add_node(inp_path + "hzura_2017_11_fsim_v0_"  + systematic + "_Events_ch78.root", 10 , 399751/1000000.)
+        add_node(inp_path + "hzura_2017_12_fsim_v0_"  + systematic + "_Events_ch78.root", 11 , 399752/1000000.)
+
+        orders, tree_names = [], []
+        for file in inp_files:
+          orders += ["lo"]
+          tree_names += ["data"]
+
+        reweight_file(inp_files, tree_names, orders, benchmarks, factors, out_path, fname)
 
 
 

@@ -36,8 +36,6 @@ vector<string> get_sysTrees(){
   vector<string> sys_ttres = {"FNUFEBDown", "FNUFEBUp", "FNUFEEDown", "FNUFEEUp", "MCScaleGain1EBDown", "MCScaleGain1EBUp", "MCScaleGain6EBDown", "MCScaleGain6EBUp", "MCScaleHighR9EBDown", "MCScaleHighR9EBUp", "MCScaleHighR9EEDown", "MCScaleHighR9EEUp", "MCScaleLowR9EBDown", "MCScaleLowR9EBUp", "MCScaleLowR9EEDown", "MCScaleLowR9EEUp", "MCSmearHighR9EBPhiDown", "MCSmearHighR9EBPhiUp", "MCSmearHighR9EBRhoDown", "MCSmearHighR9EBRhoUp", "MCSmearHighR9EEPhiDown", "MCSmearHighR9EEPhiUp", "MCSmearHighR9EERhoDown", "MCSmearHighR9EERhoUp", "MCSmearLowR9EBPhiDown", "MCSmearLowR9EBPhiUp", "MCSmearLowR9EBRhoDown", "MCSmearLowR9EBRhoUp", "MCSmearLowR9EEPhiDown", "MCSmearLowR9EEPhiUp", "MCSmearLowR9EERhoDown", "MCSmearLowR9EERhoUp", "MaterialCentralBarrelDown", "MaterialCentralBarrelUp", "MaterialForwardDown", "MaterialForwardUp", "MaterialOuterBarrelDown", "MaterialOuterBarrelUp", "MvaShiftDown", "MvaShiftUp", "ShowerShapeHighR9EBDown", "ShowerShapeHighR9EBUp", "ShowerShapeHighR9EEDown", "ShowerShapeHighR9EEUp", "ShowerShapeLowR9EBDown", "ShowerShapeLowR9EBUp", "ShowerShapeLowR9EEDown", "ShowerShapeLowR9EEUp", "SigmaEOverEShiftDown", "SigmaEOverEShiftUp",
 "JERUp", "JERDown", "JECUp", "JECDown", "UnclusteredMETUp", "UnclusteredMETDown"};
 
-  // sys_ttres = {"PUJID_tight", "NoMETXYcorr"};
-
   return sys_ttres;
 }
 
@@ -55,15 +53,6 @@ vseva::DataSet* get_dataset(string process_name, string latex_name, string short
 }
 
 vector<vseva::DataSet*> get_datasets(bool sys = false){
-/*
-  vector<vseva::DataSet*> answer = {
-      get_dataset("hzura_2017_data_v0",          "DATA 2017",        "data2017",             1.,            1., "D"),
-      get_dataset("hzura_2017_EFT2_v1",          "EFT 2",                "EFT2",             1.,            1., "S"),
-      get_dataset("hzura_2017_EFT9_v1",          "EFT 9",                "EFT9",             1.,            1., "S"),
-      get_dataset("GJets_v2",                    "#gamma+jets",         "GJets",   16792*0.0514,    224817201., "B"), // [0]
-      get_dataset("GGJets_v2",                   "#gamma#gamma+jets",  "GGJets",          82.79,     79243357., "B"), // After filter: final cross section = 8.279e+01 +- 1.072e-01 pb [0]
-  };
-*/
 
   cout << "get_datasets() ... " << endl;
   vector<vseva::DataSet*> answer = {

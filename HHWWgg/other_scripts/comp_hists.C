@@ -4,14 +4,16 @@
 using namespace vseva;
 
 void comp_hists_0(){ // different CMSSW versions
+  // TFile * file_2 = TFile::Open("/eos/user/p/pmandrik/HHWWgg_hzura/output_TMP/data_2017_v0.root");
+  // TFile * file_1 = TFile::Open("/eos/user/p/pmandrik/HHWWgg_hzura/output_TMP/data_2018_v0.root");
 
-  TFile * file_1 = TFile::Open("/afs/cern.ch/work/p/pmandrik/dihiggs/3_hzura/output_v6/hzura_2017_SM_v6.root");
-  TFile * file_2 = TFile::Open("/afs/cern.ch/work/p/pmandrik/dihiggs/3_hzura/output_v7/hzura_2017_SM_v7.root");
+  TFile * file_1 = TFile::Open("/eos/user/p/pmandrik/HHWWgg_hzura/output_2018_v2/hzura_2017_sm_fsim_v2.root");
+  TFile * file_2 = TFile::Open("/eos/user/p/pmandrik/HHWWgg_hzura/output_2018_v2/hzura_2017_sm_fsim_v2.root");
 
   TTree * tree_1 = (TTree*) file_1->Get("Def_Events");
   TTree * tree_2 = (TTree*) file_2->Get("Def_Events");
 
-  draw_hists_from_two_ttrees( tree_1, tree_2, "flashgg CMSSW_10_5_0", "flashgg CMSSW_10_6_8" );
+  draw_hists_from_two_ttrees( tree_1, tree_2, "2017 new", "2017", "1.", "1." );
 }
 
 void comp_hists_1(){ // correlation betweeen m_yy and other variables
@@ -82,6 +84,22 @@ void comp_hists_1(){ // correlation betweeen m_yy and other variables
             "CosTheta_y1_Hyy", "CosTheta_j1_Wjj", "CosTheta_Hww_W_jj"
            };
 
+  variables = { "m_yy", "dR_yy * H_yy_tlv->Pt() / m_yy", "dR_jj", "dR_WW", "dR_HH", "TMath::Abs( dPhi_nuL )",
+            "H_WW_tlv->M()",
+            "TMath::Abs( HH_tlv->CosTheta() )", "HH_tlv->M()",
+            "y1_tlv->Et()/m_yy", "y2_tlv->Et()/m_yy", 
+            "TMath::Abs( y1_tlv->Eta() )+TMath::Abs( y2_tlv->Eta() )+TMath::Abs( ljet1_tlv->Eta() )+TMath::Abs( ljet2_tlv->Eta() )",
+            "TMath::Abs( lep_leading_tlv->Eta() )",
+            "yy_mva" };
+  labels = {"M_{#gamma#gamma} [GeV]", "#Delta R(#gamma,#gamma) * p_{T}^{H_{#gamma#gamma}} / m_{#gamma#gamma} ", "#Delta R(j,j)", /*"#Delta R(W,l)",*/ "#Delta R(W,W)", "#Delta R(H,H)", "|#Delta#phi(#nu,l)|",
+    "M_{H_{WW}} [GeV]", 
+    "cos_{H} #theta^{*}", "M_{HH} [GeV]", 
+    "E_{T}^{#gamma_{1}} / m_{#gamma#gamma}", "E_{T}^{#gamma_{2}} / m_{#gamma#gamma}",
+    "|#eta_{#gamma_{1}}|+|#eta_{#gamma_{2}}|+|#eta_{j_{1}}|+|#eta_{j_{2}}|",
+    "|#eta_{l}|",
+    "flashgg MVA_{#gamma#gamma}"
+  };
+
   draw_correlations_from_two_ttrees(tree_1, tree_2, variables, labels);
 }
 
@@ -122,7 +140,7 @@ void comp_hists_3(){ // different CMSSW versions
   draw_hists_from_two_ttrees( tree_1, tree_2, "EFT 9 LO", "EFT 9 LO (reweight)", "weight / " + to_string(sum_1), "weight * weight_lo / " + to_string(sum_2) );
 }
 
-void comp_hists(){ // different CMSSW versions
+void comp_hists_4(){ // different CMSSW versions
 
   vector<string> names = {"SM", "box"};
   vector<string> samples;
@@ -204,7 +222,93 @@ void comp_hists(){ // different CMSSW versions
   }
 }
 
+TH1D* get_cut_plot(string name, TH1D * h_11, TH1D * h_12){
+  h_11->Scale( 1./h_11->Integral() );
+  h_12->Scale( 1./h_12->Integral() );
 
+  double sum_b = 1;
+  double sum_s = 1;
+  TH1D * h_a1 = new TH1D( name.c_str(), "signal",     100, -1, 1);
+  for(int i = 1; i < 100; i++){
+    sum_s -= h_11->GetBinContent( i );
+    sum_b -= h_12->GetBinContent( i );
+    if( sum_b + sum_s < 0.0001) break;
+    cout << i << " " << sum_s / TMath::Sqrt(sum_b + sum_s) << endl;
+    h_a1->SetBinContent( i, sum_s / TMath::Sqrt(sum_b + sum_s) );
+  }
+  return h_a1;
+}
+
+
+void comp_hists_5(){ 
+  int index = 1;
+
+  TFile * file_b = TFile::Open("/afs/cern.ch/work/p/pmandrik/dihiggs/8_mvanaluse/VSEVA/HHWWgg/output/chanels_sys_2017/hzura_2017_ggjets_mgg80toInf_v0_Def_Events_ch78.root");
+  TTree * tree_b = (TTree*) file_b->Get("data");
+
+  TFile * file = TFile::Open("/afs/cern.ch/work/p/pmandrik/dihiggs/8_mvanaluse/VSEVA/HHWWgg/output/reweighted_2017/hzura_2017_EFT_all_v0_Def_Events_ch78.root");
+  TTree * tree = (TTree*) file->Get("data");
+
+  TH1D * h_hh = new TH1D("hh", "signal",     100, 0, 1000);
+  tree->Draw( "HH_tlv->M() >> hh", ("weight_nlo_" + to_string(index)).c_str() ); // weight_TMVA_2017_train5_SM_BDT_b2_037
+  TCanvas * c = new TCanvas("canv", "canv", 640, 480);
+  h_hh->Draw();
+  c->Print("hh_m_test.png");
+  return;
+
+  TH1D * h_11 = new TH1D("s1", "signal",     100, -1, 1);
+  TH1D * h_12 = new TH1D("b1", "background", 100, -1, 1);
+  tree->Draw(   "weight_TMVA_2017_train5_SM_BDT_b2_037 >> s1", ("weight * weight_nlo_" + to_string(index)).c_str() ); // weight_TMVA_2017_train5_SM_BDT_b2_037
+  tree_b->Draw( "weight_TMVA_2017_train5_SM_BDT_b2_037 >> b1", "weight" );
+
+  TH1D * h_21 = new TH1D("s2", "signal",     100, -1, 1);
+  TH1D * h_22 = new TH1D("b2", "background", 100, -1, 1);
+  tree->Draw(   ("weight_TMVA_2017_train5_" + to_string(index) + "_BDT_b2_037 >> s2").c_str(), ("weight * weight_nlo_" + to_string(index)).c_str() ); // weight_TMVA_2017_train5_SM_BDT_b2_037
+  tree_b->Draw( ("weight_TMVA_2017_train5_" + to_string(index) + "_BDT_b2_037 >> b2").c_str(), "weight" );
+
+  TH1D * h_a1 = get_cut_plot("SM", h_11, h_12);
+  TH1D * h_a2 = get_cut_plot("5", h_21, h_22);
+
+  h_a1->SetTitle("TMVA SM");
+  h_a2->SetTitle( ("TMVA EFT " + to_string(index) ).c_str() );
+
+
+  TCanvas * canv = new TCanvas("canv", "canv", 640, 480);
+  h_a1->GetXaxis()->SetTitle("MVA cut");
+  h_a1->GetYaxis()->SetTitle("S / #sqrt{S+B}");
+
+  h_a1->Draw();
+  h_a2->Draw("same");
+  h_a2->SetLineColor(2);
+
+        // canv->BuildLegend(); /cvmfs/cms.cern.ch/phys_generator/gridpacks/pre2017/13TeV/madgraph/V5_2.6.5/GF_HH_10/v1/GF_HH_10_slc6_amd64_gcc630_CMSSW_9_3_16_tarball.tar.xz
+  canv->Print("Test.png");
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void comp_hists(){ 
+  comp_hists_0();
+}
 
 
 

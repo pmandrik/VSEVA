@@ -45,7 +45,7 @@ namespace vseva {
   class PlotVariable{
     public:
     PlotVariable(){}
-    PlotVariable(string key, double min, double max){
+    /*PlotVariable(string key, double min, double max){
       this->key = key;
       this->min = min;
       this->max = max;
@@ -53,13 +53,23 @@ namespace vseva {
       this->draw_type = "";
     }
 
-    PlotVariable(string key, string lab, double min, double max, string process_name = ""){
+    PlotVariable(string key, string lab, int nbins, double min, double max, string process_name = "", string expression="", string weight_expression=""){
       this->key = key;
       this->min = min;
       this->max = max;
       this->label = lab;
       this->draw_type = "";
       this->process_name   = process_name;
+      this->expression = expression;
+      this->weight_expression = weight_expression;
+    }*/
+
+    PlotVariable(string expression, string lab, int nbins, double min, double max){
+      this->min = min;
+      this->max = max;
+      this->nbins = nbins;
+      this->label = lab;
+      this->expression = expression;
     }
 
     bool CheckProcess(std::string name){
@@ -81,8 +91,10 @@ namespace vseva {
       return key;
     }
 
-    string key, label, draw_type, output_name, process_name;
+    string key, label, draw_type, output_name, process_name, expression, weight_expression;
+    TTreeFormula *value_f, *weight_f;
     double min, max;
+    int nbins;
     vector<string> processes_include, processes_exclude;
   };
 
@@ -219,12 +231,13 @@ namespace vseva {
         xmin = 0; xmax = 0; 
         ymin = 0; ymax = 0;
         signal_scale = 1;
+        corr_draw_option = "SCAT";
       }
 
       vector<TMP_hist_type*> signals, backgrounds, datas;
       int font;
       bool logY;
-      string label_x, label_y;
+      string label_x, label_y, corr_draw_option;
       double xmin, xmax, ymin, ymax;
       double signal_scale;
 
@@ -273,8 +286,10 @@ namespace vseva {
         for(auto hist : signals){
           // hist->SetLineColor( signal_color++ );
           hist->SetLineColor( colors.at(color++) );
-          hist->SetLineWidth( 5 );
-          hist->SetLineStyle( 7 );
+          // hist->SetLineWidth( 5 );
+          // hist->SetLineStyle( 7 );
+
+          hist->SetLineWidth( 2 );
           SetStyleHist(hist);
 
           if(xmin != xmax) hist->GetXaxis()->SetRangeUser(xmin, xmax);
@@ -496,11 +511,11 @@ namespace vseva {
         for(auto hist : signals)
           hist->SetMarkerColor( hist->GetLineColor() );
 
-             if(backgrounds.size()) backgrounds.at(0)->Draw("SCAT");
-        else if( signals.size())    signals.at(0)->Draw("SCAT");
+             if(backgrounds.size()) backgrounds.at(0)->Draw( corr_draw_option.c_str() );
+        else if( signals.size())    signals.at(0)->Draw( corr_draw_option.c_str()  );
 
-        for(auto hist : backgrounds) hist->Draw("same SCAT");
-        for(auto hist : signals) hist->Draw("same SCAT");
+        for(auto hist : backgrounds) hist->Draw( ("same " + corr_draw_option).c_str() );
+        for(auto hist : signals) hist->Draw( ("same " + corr_draw_option).c_str() );
         // TODO data ?
       }
 
@@ -601,6 +616,22 @@ namespace vseva {
           else                      datas.at(index)->Add( hist );
         }
       }
+      
+      void AddProcess(TMP_hist_type* hist, string type, string process_name){
+        auto it = processes.find( process_name );
+        if(it != processes.end()){
+          AddCummulative(hist, type, it->second);
+          return;
+        }
+        int index = -1;
+        Add(hist, type);
+        if(type == "S")      index = signals.size()-1;
+        else if(type == "B") index = backgrounds.size() - 1;
+        else if(type == "D") index = datas.size() - 1;
+        
+        processes[ process_name ] = index;
+      }
+      map<string, int> processes; 
   };
 
   template<class T> TCanvas * draw_hists_CMS( HistDrawer<T> * drawer, string path, string name, string label, string extra_title = "", string mode = "default"){
@@ -805,7 +836,7 @@ namespace vseva {
         h_b_2->SetLineColor(2);
         TCanvas * canv = new TCanvas("canv", "canv", 640, 480);
         h_b_1->Draw("hist");
-        h_b_2->Draw("same");
+        h_b_2->Draw("hist same");
         h_b_1->GetXaxis()->SetTitle( (name_1 + oper).c_str() );
 
         canv->BuildLegend();
@@ -853,22 +884,24 @@ namespace vseva {
         tree_1->Draw( (v1 + ":" +v2 + " >> h_b_1" ).c_str() );
         tree_2->Draw( (v1 + ":" +v2 + " >> h_b_2" ).c_str() );
 
-        // h_b_1->SetMarkerStyle( 20 );
-        // h_b_2->SetMarkerStyle( 21 );
+        h_b_1->SetMarkerStyle( 20 );
+        h_b_2->SetMarkerStyle( 21 );
 
-        // h_b_1->SetMarkerSize( 0.25 );
-        // h_b_2->SetMarkerSize( 0.25 );
+        h_b_1->SetMarkerSize( 0.25 );
+        h_b_2->SetMarkerSize( 0.25 );
 
         HistDrawer<TH2D> * drawer = new HistDrawer<TH2D>();
         drawer->Add(h_b_1, "S");
-        drawer->Add(h_b_2, "B");
+        // drawer->Add(h_b_2, "B");
 
         drawer->label_y = lab1;
         drawer->label_x = lab2;
 
+        drawer->corr_draw_option = "COL";
         //draw_hists_CMS( HistDrawer<T> * drawer, string path, string name, string label, string extra_title = "", string mode = "default"){
         draw_hists_CMS(drawer, ".", to_string(h_counter) + ".png", "", "", "correlation");
       }
+      break;
     }
   }
 

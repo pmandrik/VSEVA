@@ -25,7 +25,7 @@ map<string, vseva::PlotVariable> get_variables(){
     from AnalyseHEPPY import *
 
     systematics = ["sf_photons", "sf_electrons", "sf_muons_id", "sf_muons_iso", "sf_ljets_btag", "sf_pileup", "FracRV", "LooseMvaSF", "PreselSF", "Trigger",  "electronVetoSF"]
-    #systematics = []
+    systematics = []
     vars_with_sys_weights  = [ "m_yy", "H_WW_tlv_M" ]
     vars_with_sys_dataset  = [ "nu_tlv_Pt", "nu_tlv_Phi", "nu_reco_tlv_Pt", "nu_reco_tlv_Phi", "nu_reco_tlv_Eta", "gen_nu_tlv_Pt", "gen_nu_tlv_Phi", "gen_nu_tlv_Eta", "W_elnu_tlv_M" ]
     vars_with_sys_dataset += [ "W_jj_tlv_M", "gen_ljet1_tlv_Pt", "ljet1_tlv_Pt", "ljet2_tlv_Pt", "H_WW_tlv_M" ]
@@ -110,7 +110,7 @@ map<string, vseva::PlotVariable> get_variables(){
 
     import copy
     for var in variables[:]:
-      var.xfactor = "weight"
+      var.xfactor = "weight * (m_yy < 115 || m_yy > 135) * ( int(channel)==7 || int(channel)==8 )"
       var.sys_factors = []
       var.sys_hist_names = []
       if var.key in vars_with_sys_weights : var.sys_factors = systematics
@@ -199,6 +199,7 @@ int plot_from_file(vseva::DataSet * dataset, string input_file, string output_fi
 
   /*[[[cog
     for sys in systematics :
+      break
       for name in ["weight_" + sys + "_up", "weight_" + sys + "_down"]:
         cog.outl( "Double_t " + name + "   = 1;" )
         cog.outl( "if( tree->GetBranch( \"" + name + "\") ){" )
