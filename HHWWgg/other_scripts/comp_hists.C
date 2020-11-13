@@ -285,7 +285,46 @@ void comp_hists_5(){
   canv->Print("Test.png");
 }
 
+void comp_hists_6(){ 
+  
+  vector<string> names = {"sm"};
+  vector<string> samples;
+  samples.push_back( "/eos/user/p/pmandrik/HHWWgg_hzura/output_2016_v2_SYS/hzura_2017_sm_fsim_v2.root" );
 
+  for(int i = 1; i <= 12; i++){
+    names.push_back( to_string(i) );
+    samples.push_back( "/eos/user/p/pmandrik/HHWWgg_hzura/output_2016_v2_SYS/hzura_2017_" + to_string(i) + "_fsim_v2.root" );
+  }
+
+  for(int i = 0; i < names.size(); i++){
+    string name = names.at(i);
+    if(name == "11") continue;
+    string inp_name = samples.at(i);
+    TFile * file = TFile::Open( inp_name.c_str() );
+    TTree * tree = (TTree*) file->Get("Def_Events");
+
+    TH1D* h0 = new TH1D("h0", ("CMS LO MG EFT" + name).c_str(), 20, 250, 1200);
+    tree->Draw( "gen_HHi_tlv.M() >> h0", "weight" );
+    h0->Scale( 1./h0->Integral() );
+    HistDrawer<TH1D> * drawer = new HistDrawer<TH1D>();
+    drawer->Add(h0, "S");
+
+    TFile * file_1 = TFile::Open("/eos/user/p/pmandrik/HHWWgg_hzura/output_2016_v2_SYS/hzura_2017_sm_fsim_v2.root");
+    TTree * tree_1 = (TTree*) file_1->Get("Def_Events");
+    TH1D* halt = new TH1D("halt", (" sm -> " + name + " LO reweighting").c_str(), 20, 250, 1200);
+    double sum = get_sum_of_variable(tree_1, "weight");
+    tree_1->Draw( "gen_HHi_tlv.M() >> halt", ("weight * reweight_factor_lo_" + name).c_str()  );
+    halt->Scale( 1./sum );
+    drawer->Add(halt, "S");
+
+    drawer->label_y = "";
+
+    draw_hists_CMS(drawer, ".", "EFT_"+ name +".png", "M_{HH}", "EFT " + name, "tmva");
+
+    file_1->Close();
+    file->Close();
+  }
+}
 
 
 
@@ -307,7 +346,7 @@ void comp_hists_5(){
 
 
 void comp_hists(){ 
-  comp_hists_0();
+  comp_hists_6();
 }
 
 

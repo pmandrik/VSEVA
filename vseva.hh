@@ -105,7 +105,55 @@ namespace vseva {
     std::string draw_option, label, output_name;
   };
 
+  // STYLES & COLORS ======================================================================================================================================================================
+  class TMVATransformer{
+    public:
+    void Transform(int density){
+      std::sort ( data.begin(), data.end() );
+      
+      if( density < 1 or density > data.size() / 2 ){
+        cout << "TMVATransformer.Transform() failed ... ";
+        cout << "density = " << density << ", data size = " << data.size() << endl;
+        return;
+      }
+      for( int i = 0; i < data.size(); i += density ){
+        mva_tresholds[  data.at(i) ] = double(i) / data.size();
+      }
+    }
 
+    void AddPoint(double old_tmva_score){
+      data.push_back( old_tmva_score);
+    }
+
+    // assume the TMVA score already in the tree 
+    void AddTree(TTree * ttree, string var_expression){
+      Double_t tmva_value = 0;
+      if(var_expression.size() ){
+        if( ttree->GetBranch( var_expression.c_str() ) ){
+          ttree->SetBranchAddress(var_expression.c_str(), &tmva_value );
+        } else{
+          cout << "Don't have a branch with name = " << var_expression << endl;
+          ttree->Print();
+        }
+      }
+
+      int nevents = ttree->GetEntries();
+      for(int i = 0; i < nevents; i++){
+        ttree->GetEntry(i);
+        AddPoint( tmva_value );
+      }
+    }
+
+    // return the score after transformation    
+    double GetScore(double old_tmva_score){
+      auto it = mva_tresholds.lower_bound( old_tmva_score );
+      if( it == mva_tresholds.end() ) return 1.;
+      return it->second;
+    }
+
+    vector<double> data;
+    map<double, double> mva_tresholds;
+  };
 
   // STYLES & COLORS ======================================================================================================================================================================
   inline Color_t FindFreeCustomColorIndex(Color_t start = 1000){
@@ -232,6 +280,7 @@ namespace vseva {
         ymin = 0; ymax = 0;
         signal_scale = 1;
         corr_draw_option = "SCAT";
+        maxh_v_scale_factor = 1.75;
       }
 
       vector<TMP_hist_type*> signals, backgrounds, datas;
@@ -239,7 +288,7 @@ namespace vseva {
       bool logY;
       string label_x, label_y, corr_draw_option;
       double xmin, xmax, ymin, ymax;
-      double signal_scale;
+      double signal_scale, maxh_v_scale_factor;
 
       void Print(){
         cout << "mRoot::HistDrawer.Print() " << endl;
@@ -344,7 +393,7 @@ namespace vseva {
         }
         else {
           minh_v = 0.;
-          maxh_v = 1.5*maxh_v;
+          maxh_v = maxh_v_scale_factor*maxh_v;
         }
         SetMinMax(minh_v, maxh_v);
       }
@@ -361,7 +410,7 @@ namespace vseva {
         }
         else {
           minh_v = 0.;
-          maxh_v = 1.5*maxh_v;
+          maxh_v = maxh_v_scale_factor*maxh_v;
         }
         SetMinMax(minh_v, maxh_v);
         if( not backgrounds.size() ) return;
@@ -732,8 +781,59 @@ namespace vseva {
     return canvas;
   }
 
-  
+  //========================================================================================================================== DRAW CORRELATION & COVARIANCE PLOT
+  class CorrParameter {
+    public:
+      string name;
+      double val, mean, rms, burn_frac;
+      vector<double> vals;
+      vector<double> weights;
 
+      CorrParameter(string n){
+        mean = -1999, rms = -1999;
+        name = n;
+      }
+
+      void AddEvent(const double & value, const double & weight){
+        vals.push_back( value );
+        weights.push_back( weight );
+      }
+
+      double GetMean(){
+        if(mean > -999) return mean;
+        mean = 0;
+        for(int i = 0; i < vals.size(); i++) mean  += vals.at(i) * weights.at(i);
+        mean /= std::accumulate(weights.begin(), weights.end(), 0.);
+        return mean;
+      }
+
+      double GetRMS(){
+        if(rms > -999) return rms;
+        rms = 0;
+        mean = GetMean();
+        for(int i = 0; i < vals.size(); i++) 
+          rms  += pow(vals.at(i) - mean, 2) * weights.at(i);
+        rms /= std::accumulate(weights.begin(), weights.end(), 0.);
+        rms = sqrt(rms);
+        return rms;
+      }
+
+      double GetCovariance(CorrParameter * other){
+        double mean_x = GetMean();
+        double mean_y = other->GetMean();
+        double cov = 0;
+        for(int i = 0; i < vals.size(); i++){
+          cov += (vals.at(i) - mean_x) * (other->vals.at(i) - mean_y) * weights.at(i);
+        }
+        cov /= std::accumulate(weights.begin(), weights.end(), 0.);
+        return cov;
+      }
+
+      double GetCorrelation(CorrParameter * other){
+        double cor = GetCovariance(other) / (GetRMS() * other->GetRMS()); 
+        return cor;
+      }
+  };
 
   //==========================================================================================================================
   /*void draw_hist_from_two_ttrees(string var_name, TTree * tree_1, TTree * tree_2, string label_1, string label_2, string weight_1="1", string weight_2="1"){

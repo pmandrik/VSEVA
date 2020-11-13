@@ -4,25 +4,25 @@ from array import array
 import copy
 from hadd import *
 
-def get_CMS_EFT_benchmarks( name_, year_ ):
+def get_CMS_EFT_benchmarks( name_, year_, CMS_fake = False):
   name, year = str(name_), str(year_)
   answer = None
   if name == "SM" :  answer = [1, 1, 0, 0, 0]
   if name == "box" : answer = [0, 1, 0, 0, 0]
-  if name ==  "0" : answer = [7.5, 1, -1, 0, 0]
-  if name ==  "1" : answer = [1.0, 1.0, 0.5, -0.8, 0.6]
-  if name ==  "2" : answer = [1.0, 1.0, -1.5, 0.0, -0.8]
-  if name ==  "3" : answer = [-3.5, 1.5, -3.0, 0.0, 0.0]
-  if name ==  "4" : answer = [1.0, 1.0, 0.0, 0.8, -1.0]
-  if name ==  "5" : answer = [2.4, 1.0, 0.0, 0.2, -0.2]
-  if name ==  "6" : answer = [5.0, 1.0, 0.0, 0.2, -0.2]
-  if name ==  "7" : answer = [15.0, 1.0, 0.0, -1.0, 1.0]
-  if name ==  "8" : answer = [1.0, 1.0, 1.0, -0.6, 0.6]
-  if name ==  "9" : answer = [10.0, 1.5, -1.0, 0.0, 0.0]
-  if name ==  "10" : answer = [2.4, 1.0, 0.0, 1.0, -1.0]
-  if name ==  "11" : answer = [15.0, 1.0, 1.0, 0.0, 0.0]
+  if name ==  "1" : answer = [7.5, 1, -1, 0, 0]
+  if name ==  "2" : answer = [1.0, 1.0, 0.5, -0.8, 0.6]
+  if name ==  "3" : answer = [1.0, 1.0, -1.5, 0.0, -0.8]
+  if name ==  "4" : answer = [-3.5, 1.5, -3.0, 0.0, 0.0]
+  if name ==  "5" : answer = [1.0, 1.0, 0.0, 0.8, -1.0]
+  if name ==  "6" : answer = [2.4, 1.0, 0.0, 0.2, -0.2]
+  if name ==  "7" : answer = [5.0, 1.0, 0.0, 0.2, -0.2]
+  if name ==  "8" : answer = [15.0, 1.0, 0.0, -1.0, 1.0]
+  if name ==  "9" : answer = [1.0, 1.0, 1.0, -0.6, 0.6]
+  if name ==  "10" : answer = [10.0, 1.5, -1.0, 0.0, 0.0]
+  if name ==  "11" : answer = [2.4, 1.0, 0.0, 1.0, -1.0]
+  if name ==  "12" : answer = [15.0, 1.0, 1.0, 0.0, 0.0]
 
-  if year == "2017" and answer:
+  if (year == "2017" or year == "2018") and answer and CMS_fake:
     answer[4] = 1.0
     answer[0], answer[1] = answer[1], answer[0]
   return answer
@@ -143,7 +143,7 @@ class ReweightGudrin():
       # print "ReweightGudrin.GetDiffXsection(): Warning, m_hh =", m_hh, "< 250"
       return 0
 
-    print c3, ct, ctt, cg, cgg
+    # print c3, ct, ctt, cg, cgg
     couplings = [ pow(ct,4), pow(ctt,2), pow(c3 * ct,2), pow(c3*cg,2), pow(cgg,2), ctt*pow(ct,2), pow(ct,3)*c3,
                   ct*c3*ctt, cg*c3*ctt, ctt*cgg, pow(ct,2)*cg*c3, pow(ct,2)*cgg, 
                   ct*pow(c3,2)*cg, ct*c3*cgg, cg*c3*cgg, 
@@ -160,7 +160,7 @@ class ReweightGudrin():
       if m_hh > mass : continue
       weight = 0
       for A, kappa in zip(item[1], couplings):
-        print A, kappa, A * kappa
+        # print A, kappa, A * kappa
         weight += A * kappa
       return weight
     # print "ReweightGudrin.GetDiffXsection(): Warning, m_hh =", m_hh, " out of mass range"
@@ -195,8 +195,9 @@ class ReweightGudrin():
     return xsection * sm_xsection
 
 def make_prediction_hist(r, r_old, benchmark_title):
+  
   benchmark_title = str(benchmark_title)
-  benchmark   = r.GetEFTBenchmark( benchmark_title, 2017 )
+  benchmark   = r.GetEFTBenchmark( benchmark_title, 2016 )
 
   start_x = 250
   end_x   = 1030
@@ -215,7 +216,7 @@ def make_prediction_hist(r, r_old, benchmark_title):
     h2.Fill( start_x + 20 * i, weight );
     sum_nlo += weight * 20
 
-  benchmark   = r_old.GetEFTBenchmark( benchmark_title, 2017 )
+  benchmark   = r_old.GetEFTBenchmark( benchmark_title, 2016 )
   sum_lo_old = 0
   if True :
     h0 = ROOT.TGraphErrors( len(r_old.mhh_bins)-2 );
@@ -227,7 +228,7 @@ def make_prediction_hist(r, r_old, benchmark_title):
         cos = (r_old.cos_theta[i+1] + r_old.cos_theta[i])/2
         dcos = r_old.cos_theta[i+1] - r_old.cos_theta[i]
         weight += r_old.GetDiffXsection(mhh, cos, benchmark ) * dcos;
-      print j, mhh, weight, dm/2
+      # print j, mhh, weight, dm/2
       sum_lo_old += weight * dm
       h0.SetPoint(j, mhh, weight)
       h0.SetPointError(j, dm/2, 0)
@@ -238,7 +239,9 @@ def make_prediction_hist(r, r_old, benchmark_title):
   h1.SetLineColor(2)
   h2.SetLineColor(3)
   h0.SetLineColor(4)
-  h2.SetTitle("EFT"+benchmark_title)
+  
+  title = benchmark_title
+  h2.SetTitle("EFT benchmark "+title)
 
   if False:
     for i in xrange( h0.GetN() ) : h0.GetY()[i] /= sum_lo_old; 
@@ -247,13 +250,13 @@ def make_prediction_hist(r, r_old, benchmark_title):
 
   for h in [h1, h2, h0]:
     h.SetLineWidth(3)
-    h.GetXaxis().SetTitle("M_{HH}");
-    h.GetYaxis().SetTitle("d#sigma/dm / #sigma");
+    h.GetXaxis().SetTitle("M_{HH} [GeV]");
+    h.GetYaxis().SetTitle("d#sigma/dm [fb/GeV]");
   h2.SetStats(False);
 
   h2.Draw("hist")
   h1.Draw("hist same")
-  h0.Draw("P")
+  h0.Draw("p")
   h2.GetYaxis().SetRangeUser(0., max(h2.GetMaximum(), h1.GetMaximum())*1.5);
 
   x1=0.55
@@ -266,7 +269,9 @@ def make_prediction_hist(r, r_old, benchmark_title):
   #ROOT.gStyle.SetLegendBorderSize(3);
   legend.AddEntry(h0, "LO I", "lp");
   legend.AddEntry(h1, "LO II", "lp");
-  legend.AddEntry(h2, "NLO II", "lp");
+  legend.AddEntry(h2, "NLO II (normalised to LO)", "lp");
+  h2.Scale( h1.Integral() / h2.Integral() );
+  h2.GetYaxis().SetRangeUser(0., max(h2.GetMaximum(), h1.GetMaximum())*1.5);
   legend.Draw();
 
   canv.Print( "out/"+str(benchmark_title)+".png" );
@@ -352,8 +357,15 @@ def reweight_file(inp_file_names, inp_tree_names, inp_orders, inp_benchmarks_, i
 if __name__ == "__main__" :
   import sys
 
-  r_gudrin   = ReweightGudrin();
-  print r_gudrin.GetDiffXsection(999, r_gudrin.GetEFTBenchmark("7", "2017"), "nlo" );
+  
+  r1   = ReweightGudrin()
+  r2 = ReweightCarvalho()
+  for bm in ["SM", 1, 2, 3 ,4 ,5 ,6 ,7 ,8 ,9 ,10 ,11 ,12] :
+    make_prediction_hist(r1, r2, bm)
+  
+
+  # r_gudrin   = ReweightGudrin();
+  # print r_gudrin.GetDiffXsection(999, r_gudrin.GetEFTBenchmark("7", "2017"), "nlo" );
 
   if False :
 

@@ -7,6 +7,61 @@
 #include "../vseva.hh"
 
 using namespace mRoot;
+using namespace vseva;
+
+//==================================================================================================== HHWWgg configuration 2020-11-03
+void set_input_files(string node, string year, string & TMVA_NAME, string & input_data_file_name){
+  if(year == "2018"){
+    TMVA_NAME = "weight_TMVA_2018_t2_" + node + "_BDT_b2_0";
+    input_data_file_name = "/eos/user/p/pmandrik/HHWWgg_hzura/output_2018_v3_noSYS/data_2018_v2.root";
+  }
+  if(year == "2017"){
+    TMVA_NAME = "weight_TMVA_2017_trainFULLSIMv1_" + node + "_BDT_b2_021";
+    input_data_file_name = "/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/data_2017_plusF.root";
+  }
+  if(year == "2016"){
+    TMVA_NAME = "weight_TMVA_2016_trainFULLSIMv1_" + node + "_BDT_b2_020";
+    input_data_file_name = "/eos/user/p/pmandrik/HHWWgg_hzura/output_2016_v2_SYS/data_2016_v2.root";
+  }
+}
+
+TMVATransformer * TMVA_TRANSFORMATION;
+TMVATransformer * get_tmva(string node, string year){
+  TMVATransformer * answer = new TMVATransformer();
+
+  string file_name, tree_name, tmva_name;
+  tree_name = "Def_Events";
+  set_input_files( node, year, tmva_name, file_name );
+
+  TFile * file = TFile::Open( file_name.c_str() );
+  TTree * tree = (TTree *)file->Get( tree_name.c_str() );
+
+  answer->AddTree( tree, tmva_name.c_str() );
+  answer->Transform( 1 );
+
+  file->Close();
+  return answer;
+}
+
+
+//====================================================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 vector<string> get_sysWeights(){
