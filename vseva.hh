@@ -98,12 +98,41 @@ namespace vseva {
     vector<string> processes_include, processes_exclude;
   };
 
-  class CustomPlotVariables{
-    public:
-    std::vector<PlotVariable> variables;
-    std::string weight;
-    std::string draw_option, label, output_name;
-  };
+
+    class CustomPlotVariables{
+      public:
+      std::vector<PlotVariable> variables;
+      std::string weight;
+      std::string draw_option, label, output_name;
+    };
+
+  // STAT ANALYSES AND LIMITS ======================================================================================================================================================================
+  void get_combine_limits(std::string input_file, double & obs, double & s2_m, double & s1_m, double & c, double & s1_p, double & s2_p){
+    obs = 0; s2_m = 0; s1_m = 0; c = 0; s1_p = 0; s2_p = 0;
+
+    TFile * file = TFile::Open( input_file.c_str() );
+    if(not file){
+      cout << "vseva::get_combine_limits(): file" << input_file << " " << file << endl;
+      return;
+    }
+
+    TTree * tree = (TTree * ) file->Get("limit");
+    if(not tree){
+      cout << "vseva::get_combine_limits(): no tree \"limits\" in file " << input_file << endl;
+      file->Close();
+      return;
+    }
+    
+    Double_t lim;
+    tree->SetBranchAddress("limit", & lim );
+    tree->GetEntry(0); s2_m = lim;
+    tree->GetEntry(1); s1_m = lim;
+    tree->GetEntry(2); c = lim;
+    tree->GetEntry(3); s1_p = lim;
+    tree->GetEntry(4); s2_p = lim;
+    tree->GetEntry(5); obs = lim;
+    file->Close();
+  }
 
   // STYLES & COLORS ======================================================================================================================================================================
   class TMVATransformer{
@@ -644,8 +673,8 @@ namespace vseva {
         return canvas;
       }
 
-
-      void Add(TMP_hist_type* hist, string type){
+      void Add(TMP_hist_type* hist, string type, string title=""){
+        if(title.size()) hist->SetTitle( title.c_str() );
         if(type == "S")   signals.push_back( hist );
         else if(type == "B") backgrounds.push_back( hist );
         else if(type == "D") datas.push_back( hist );

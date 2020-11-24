@@ -200,6 +200,8 @@ class ReweightCarvalho {
 
   double GetDiffXsection(double m_hh, double cos_theta, const vector<double> & eft_parameters){
     if(m_hh < 250) return 0;
+    cos_theta = abs( cos_theta );
+
     double kl, kt, c2, cg, c2g;
     kl = eft_parameters[0];
     kt = eft_parameters[1];
