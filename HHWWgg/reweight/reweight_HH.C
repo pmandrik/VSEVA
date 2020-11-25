@@ -32,8 +32,8 @@ vector<double> get_CMS_EFT_benchmarks( string name, string year, bool cms_fake =
 }
 
 // HH xsection using expression from https://arxiv.org/abs/1806.05162
-double get_eft_xsec(string mark, string order, int year, bool cms_fake=false){
-    vector<double> answer = get_CMS_EFT_benchmarks(mark, to_string(year), cms_fake);
+double get_eft_xsec(string mark, string order, string year = "2016", bool cms_fake=false){
+    vector<double> answer = get_CMS_EFT_benchmarks(mark, year, cms_fake);
     double ct  = answer[1];
     double ctt = answer[2];
     double c3  = answer[0];
@@ -331,8 +331,80 @@ void make_prediction_hists(){
   }
 }
 
+// usage example ==============================================================================
+void reweight_example(){
+  // preparation ... ==============================================================================
+  string year = "2017";
+  string initial_benchmark = "sm";
+  vector<string> out_benchmars = {"sm", "box", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"};
+
+  // ReweightGudrin and ReweightCarvalho will provide 
+  ReweightGudrin   r_gudrin = ReweightGudrin("LO-Ais-13TeV.csv", "NLO-Ais-13TeV.csv");
+  ReweightCarvalho r_carval = ReweightCarvalho("coefficientsByBin_extended_3M_costHHSim_59-4.txt");
+
+  // Couplings values of the EFT benchmarks have different basis in Gudrin and Carvalho theoretical papers
+  // obtain initial EFT points and total cross sections
+  vector<double> benchmark_coupling_gudrin_initial = r_gudrin.GetEFTBenchmark( initial_benchmark, year, true  ) ;
+  vector<double> benchmark_coupling_carval_initial = r_carval.GetEFTBenchmark( initial_benchmark, year, true  ) ;
+  double xsec_initial                = get_eft_xsec(initial_benchmark, "lo", year, true);
+
+  // set final EFT points and total cross sections
+  vector< vector<double> > benchmark_couplings_gudrin_final, benchmark_couplings_carval_final;
+  vector<double> xsecs_final_lo, xsecs_final_nlo;
+  for(int i = 0; i < out_benchmars.size(); i++){
+    benchmark_couplings_gudrin_final.push_back   ( r_gudrin.GetEFTBenchmark( out_benchmars.at(i), year, false ) );
+    benchmark_couplings_carval_final.push_back   ( r_carval.GetEFTBenchmark( out_benchmars.at(i), year, false ) );
+    xsecs_final_lo.push_back ( get_eft_xsec(out_benchmars.at(i), "lo", year, false) );
+    xsecs_final_nlo.push_back( get_eft_xsec(out_benchmars.at(i), "nlo", year, false) );
+  }
+
+  // event loop ... ==============================================================================
+  double zero_weights_events = 0, total_events = 100;
+  for(int N = 0; N < total_events; N++){
+    // put the gen level m_HH and cos^{CS}(H, Oz) values here 
+    double m_HH  = 300;
+    double cos_H = 0.2;
+
+    // initial differential crossections
+    double dXsection_gudrin_lo_initial  = r_gudrin.GetDiffXsection( m_HH, benchmark_coupling_gudrin_initial, "lo" );
+    double dXsection_carval_lo_initial  = r_carval.GetDiffXsection( m_HH, cos_H, benchmark_coupling_carval_initial );
+
+    // check if m_HH and cos_H within defined reweighting range, otherwise the dxsec is 0
+    if( dXsection_gudrin_lo_initial < 0.000001){
+      zero_weights_events += 1;
+      continue;
+    }
+
+    // calculate the reweighting factor from initial EFT benchmark to every other
+    for(int i = 0; i < out_benchmars.size(); i++){
+      double dXsection_gudrin_nlo_final = r_gudrin.GetDiffXsection( m_HH, benchmark_couplings_gudrin_final.at(i), "nlo" );
+      double dXsection_gudrin_lo_final  = r_gudrin.GetDiffXsection( m_HH, benchmark_couplings_gudrin_final.at(i), "lo" );
+      double dXsection_carval_lo_final  = r_carval.GetDiffXsection( m_HH, cos_H, benchmark_couplings_carval_final.at(i) );
+
+      // if we have a set of N generated events the probability to obtain N_i events in the Mgg bin i is a DeltaM dXsec(Mgg_i) / Xsec 
+      // where DeltaM is a bin width, dXsec is a differential cross section and Xsec is a cross section. 
+      // So, N_i = N DeltaM dXsec(Mgg_i) / Xsec (eq 1). The another point in EFT space will have the different cross sections 
+      // dXsec' and Xsec' and expected number of events N_i' = N DeltaM dXsec'(Mgg_i) / Xsec' (eq 2). 
+      // From (eq 1) and (eq 2) N_i' = N_i (dXsec'(Mgg_i) / dXsec(Mgg_i)) (Xsec / Xsec'). Sum of the events in bin i is a N_i by definition. 
+      // So, the sum of the events in bin i with weight w_i =(dXsec'(Mgg_i) / dXsec(Mgg_i)) (Xsec / Xsec') is the N_i'.
+      double weight_gudrin_nlo = dXsection_gudrin_nlo_final / dXsection_gudrin_lo_initial * xsec_initial / xsecs_final_nlo.at( i );
+      double weight_gudrin_lo  = dXsection_gudrin_lo_final  / dXsection_gudrin_lo_initial * xsec_initial / xsecs_final_lo.at( i );
+      double weight_carval_lo  = dXsection_carval_lo_final  / dXsection_carval_lo_initial * xsec_initial / xsecs_final_lo.at( i );
+
+      // cout << initial_benchmark << " -> " << out_benchmars.at(i) << " " << dXsection_gudrin_nlo_final << " " << dXsection_gudrin_lo_final << " " << dXsection_carval_lo_final << endl;
+      cout << N << " " << initial_benchmark << " -> " << out_benchmars.at(i) << " " << weight_gudrin_nlo << " " << weight_gudrin_lo << " " << weight_carval_lo << endl;
+    }
+  }
+
+  // because the initial set of generated events from MadGraph is defined in the range m_HH [250, +inf]
+  // while the reweighting is defined in the continuum range [250, X]
+  // we need to apply an extra normalisation weight to take this into account
+  double extra_weight = total_events / (total_events - zero_weights_events);
+}
+
 void reweight_HH(){
-  make_prediction_hists();
+  // make_prediction_hists();
+  reweight_example();
 }
 
 
