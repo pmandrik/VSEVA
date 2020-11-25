@@ -23,6 +23,11 @@ vector<double> get_CMS_EFT_benchmarks( string name, string year, bool cms_fake =
     answer[0] = answer[1];
     answer[1] = tr;
   }
+  if( (year == "2016") and answer.size() and cms_fake ){
+    double tr = answer[0];
+    answer[0] = answer[1];
+    answer[1] = tr;
+  }
   return answer;
 }
 

@@ -44,6 +44,10 @@ void process_datasets(vector<dataset> datasets, vector<PlotVariable> variables, 
     string fname     = dataset.fname;
     string tree_name = "Def_Events";
     TFile * file = TFile::Open(fname.c_str(), "READ");
+    if(not file){
+      cout << "process_datasets(): can't open file " << fname <<", continue" << endl;
+      continue;
+    }
     TTree * tree = (TTree*) gDirectory->Get( tree_name.c_str() );
 
     string bdt_cut = "";
@@ -287,7 +291,7 @@ void art_hist_maker_2016_vs_2016NEW(){ // 2018
     PlotVariable("y1_tlv->Et()/m_yy", "E_{T}^{#gamma_{1}} / m_{#gamma#gamma}", 25, 0., 3),
     PlotVariable("y2_tlv->Et()/m_yy", "E_{T}^{#gamma_{2}} / m_{#gamma#gamma}", 25, 0., 3),
     PlotVariable("yy_mva", "flashgg MVA_{#gamma#gamma}", 25, 0., 1),
-    PlotVariable("TMath::Abs( H_yy_tlv->CosTheta() )", "H cos #theta", 25, 0., 1),
+    PlotVariable("TMath::Abs( H_yy_tlv->CosTheta() )", "|cos_{H}^{CS} #theta|", 25, 0., 1),
     PlotVariable("TMath::Abs( lep_leading_tlv->Eta() )", "|#eta_{l}|", 25, 0., 2.5),
     PlotVariable("TMath::Abs( y1_tlv->Eta() )+TMath::Abs( y2_tlv->Eta() )+TMath::Abs( ljet1_tlv->Eta() )+TMath::Abs( ljet2_tlv->Eta() )", "|#eta_{#gamma_{1}}|+|#eta_{#gamma_{2}}|+|#eta_{j_{1}}|+|#eta_{j_{2}}|", 25, 0., 9.)
   };
@@ -314,6 +318,87 @@ void art_hist_maker_2016_vs_2016NEW(){ // 2018
   };
 
   process_datasets(datasets, variables, "vars2016_vs");
+}
+
+void art_hist_maker_2016_reweighting(){ // 2018
+  vector<PlotVariable> variables = {
+    PlotVariable("gen_HHi_tlv->M()", "m_{HH}^{gen}",  25, 250, 800),
+    PlotVariable("TMath::Abs( H_yy_tlv->CosTheta() )", "|cos_{H}^{CS} #theta|", 25, 0., 1),
+  };
+
+  vector<dataset> datasets_sm = {
+    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2016_v5_SYS/cHHH1.root", "mc_weight * TMath::Abs(mc_raw_weight) * weight",  "SM NLO Powheg",     "S"),
+    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2016_v5_SYS/sm.root",    "mc_weight * TMath::Abs(mc_raw_weight) * weight",  "SM LO MadGraph",    "S")
+  };
+  for(int j = 1; j < 13; j++){
+    if(j == 8) continue;
+    string node_alt = to_string(j);
+    datasets_sm.push_back( dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2016_v5_SYS/" + node_alt + ".root",    
+                                                   "mc_weight * TMath::Abs(mc_raw_weight) * weight * reweight_factor_nlo_sm",  "Sum EFT nodes reweight to NLO SM", "S") );
+    datasets_sm.push_back( dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2016_v5_SYS/" + node_alt + ".root",    
+                                                   "mc_weight * TMath::Abs(mc_raw_weight) * weight * reweight_factor_lo_sm",  "Sum EFT nodes reweight to LO SM", "S") );
+  }
+  process_datasets(datasets_sm, variables, "reweight2016_sm_");
+
+  for(int i = 1; i < 13; i++){
+    if(i == 8) continue;
+    string node = to_string(i);
+    vector<dataset> datasets = {
+      dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2016_v5_SYS/" + node + ".root",    "mc_weight * TMath::Abs(mc_raw_weight) * weight",  "EFT " + node + " LO MadGraph",    "S")
+    };
+
+    for(int j = 1; j < 13; j++){
+      if(j == 8) continue;
+      if(i == j) continue;
+      string node_alt = to_string(j);
+      datasets.push_back( dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2016_v5_SYS/" + node_alt + ".root",    
+                                  "mc_weight * TMath::Abs(mc_raw_weight) * weight * reweight_factor_nlo_" + node,  "EFT " + node_alt + " reweight to NLO EFT " + node,    "S") );
+      datasets.push_back( dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2016_v5_SYS/" + node_alt + ".root",    
+                                  "mc_weight * TMath::Abs(mc_raw_weight) * weight * reweight_factor_lo_" + node,  "EFT " + node_alt + " reweight to LO EFT " + node,    "S") );
+    }
+
+    process_datasets(datasets, variables, "reweight2016_" + node + "_" );
+  }
+}
+
+void art_hist_maker_2017_reweighting(){ // 2018
+  vector<PlotVariable> variables = {
+    PlotVariable("gen_HHi_tlv->M()", "m_{HH}^{gen}",  25, 250, 800),
+    PlotVariable("TMath::Abs( H_yy_tlv->CosTheta() )", "|cos_{H}^{CS} #theta|", 25, 0., 1),
+  };
+
+  vector<dataset> datasets_sm = {
+    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/cHHH1.root", "mc_weight * TMath::Abs(mc_raw_weight) * weight",  "SM NLO Powheg",     "S"),
+  };
+  for(int j = 1; j < 13; j++){
+    if(j == 8) continue;
+    string node_alt = to_string(j);
+    datasets_sm.push_back( dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/" + node_alt + ".root",    
+                                                   "mc_weight * TMath::Abs(mc_raw_weight) * weight * reweight_factor_nlo_sm",  "Sum EFT nodes reweight to NLO SM", "S") );
+    datasets_sm.push_back( dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/" + node_alt + ".root",    
+                                                   "mc_weight * TMath::Abs(mc_raw_weight) * weight * reweight_factor_lo_sm",  "Sum EFT nodes reweight to LO SM", "S") );
+  }
+  process_datasets(datasets_sm, variables, "reweight2017_sm_");
+
+  for(int i = 1; i < 13; i++){
+    if(i == 8) continue;
+    string node = to_string(i);
+    vector<dataset> datasets = {
+      dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/" + node + ".root",    "mc_weight * TMath::Abs(mc_raw_weight) * weight",  "EFT " + node + " LO MadGraph",    "S")
+    };
+
+    for(int j = 1; j < 13; j++){
+      if(j == 8) continue;
+      if(i == j) continue;
+      string node_alt = to_string(j);
+      datasets.push_back( dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/" + node_alt + ".root",    
+                                  "mc_weight * TMath::Abs(mc_raw_weight) * weight * reweight_factor_nlo_" + node,  "EFT " + node_alt + " reweight to NLO EFT " + node,    "S") );
+      datasets.push_back( dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/" + node_alt + ".root",    
+                                  "mc_weight * TMath::Abs(mc_raw_weight) * weight * reweight_factor_lo_" + node,  "EFT " + node_alt + " reweight to LO EFT " + node,    "S") );
+    }
+
+    process_datasets(datasets, variables, "reweight2017_" + node + "_" );
+  }
 }
 
 /*
@@ -456,8 +541,9 @@ void art_hist_maker(){
   // art_hist_maker_2017();
   // make_model_hists();
   // art_tmva_hist_maker("2017");
-
-  art_hist_maker_2016_vs_2016NEW();
+  // art_hist_maker_2016_vs_2016NEW();
+  // art_hist_maker_2016_reweighting();
+  art_hist_maker_2017_reweighting();
 }
 
 

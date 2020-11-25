@@ -108,7 +108,7 @@ void tmva_train(){
   vector<string> node_names = {"sm", "cHHH0", "cHHH1", "cHHH2", "cHHH5"};
   for(int i = 1; i <= 12; i++) node_names.push_back( to_string(i) );
   // vector<string> years = {"2016", "2017", "2018"};
-  vector<string> years = {"2017"} ;
+  vector<string> years = {"2018"} ;
 
   vector<TrainCfg> node_cfgs;
   for(auto year : years){
@@ -132,7 +132,7 @@ void tmva_train(){
           node_dataset.input_path      = "./output/chanels_split_2016/hzura_" + node_name + "_v2.root";
           node_dataset.train_tree_name = "train";
           node_dataset.data_tree_name  = "data";
-          node_dataset.weight_exp      = "weight * mc_weight / mc_lumi_weight";
+          node_dataset.weight_exp      = "TMath::Abs(mc_raw_weight) * weight * mc_weight";
           cfg.datasets.push_back( node_dataset );
         } else { 
           vector<string> benchmarks = {"sm", "1", "2", "3", "4", "5", "6", "7", "8", "9", "12"};
@@ -142,40 +142,17 @@ void tmva_train(){
             node_dataset.input_path      = "./output/chanels_split_2016/hzura_2017_" + benchmark + "_fsim_v2.root";
             node_dataset.train_tree_name = "train";
             node_dataset.data_tree_name  = "data";
-            node_dataset.weight_exp      = "weight * reweight_factor_nlo_" + node_name;
+            node_dataset.weight_exp      = "TMath::Abs(mc_raw_weight) * weight * mc_weight * reweight_factor_nlo_" + node_name;
             cfg.datasets.push_back( node_dataset );
           }
         }
       }
 
       if(year == "2017"){
-        TrainDataset ggjets_dataset;
-        ggjets_dataset.input_path      = "./output/chanels_split_2017_c2/ggjets_2017_v2.root";
-        ggjets_dataset.signal          = false;
-        ggjets_dataset.train_tree_name = "train";
-        ggjets_dataset.data_tree_name  = "data";
-        ggjets_dataset.weight_exp      = "weight * mc_weight";
-        cfg.datasets.push_back( ggjets_dataset );
-
-        vector<string> benchmarks = {"sm", "1", "2", "3", "4", "5", "6", "7", "9", "10", "11", "12"};
-        for(auto benchmark : benchmarks){
-          TrainDataset node_dataset;
-          node_dataset.signal          = true;
-          node_dataset.input_path      = "./output/chanels_split_2017_c2/hzura_2017_" + benchmark + "_v2.root"; // hzura_2017_EFT_all_v1_Def_Events_ch78.root
-                                                                                                                          // hzura_2017_all_v1_Def_Events_ch78.root
-                                                                                                                          // hzura_2017_EFT_all_v1_Def_Events_ch78.root
-          if(benchmark == "sm") node_dataset.input_path      = "./output/chanels_split_2017_c2/hzura_2017_" + benchmark + "_fsim_v2.root";
-          node_dataset.train_tree_name = "train";
-          node_dataset.data_tree_name  = "data";
-          node_dataset.weight_exp      = "weight * reweight_factor_nlo_" + node_name;
-          cfg.datasets.push_back( node_dataset );
-        }
-      }
-      if(year == "2018"){
-        vector<string> b_datasets = { "2018_ggjets_v2.root", "2018_gjets1_v2.root", "zgjets.root", "wgjets.root", "ttjets.root", "ttgg.root", "ttgjets.root"};
+        vector<string> b_datasets = { "dy.root", "wgg.root", "zgjets.root", "wgjets.root", "ttjets.root", "ttgjets.root", "ttgg.root", "ggjets.root", "gjets.root" };
         for( string bname :  b_datasets ){
           TrainDataset ggjets_dataset;
-          ggjets_dataset.input_path      = "./output/chanels_split_2018/" + bname;
+          ggjets_dataset.input_path      = "./output/chanels_split_2017_v2/" + bname;
           ggjets_dataset.signal          = false;
           ggjets_dataset.train_tree_name = "train";
           ggjets_dataset.data_tree_name  = "data";
@@ -186,20 +163,53 @@ void tmva_train(){
         if( node_name.find("cHHH") != string::npos ){
           TrainDataset node_dataset;
           node_dataset.signal          = true;
-          node_dataset.input_path      = "./output/chanels_split_2018/hzura_2018_" + node_name + "_fsim_v2.root";
+          node_dataset.input_path      = "./output/chanels_split_2017_v2/" + node_name + ".root";
           node_dataset.train_tree_name = "train";
           node_dataset.data_tree_name  = "data";
-          node_dataset.weight_exp      = "weight * mc_weight / mc_lumi_weight";
+          node_dataset.weight_exp      = "TMath::Abs(mc_raw_weight) * weight * mc_weight";
           cfg.datasets.push_back( node_dataset );
         } else { 
           vector<string> benchmarks = {"sm", "1", "2", "3", "4", "5", "6", "7", "9", "12"};
           for(auto benchmark : benchmarks){
             TrainDataset node_dataset;
             node_dataset.signal          = true;
-            node_dataset.input_path      = "./output/chanels_split_" + year + "/hzura_2018_" + benchmark + "_fsim_v2.root";
+            node_dataset.input_path      = "./output/chanels_split_2017_v2/" + benchmark + ".root";
             node_dataset.train_tree_name = "train";
             node_dataset.data_tree_name  = "data";
-            node_dataset.weight_exp      = "weight * reweight_factor_nlo_" + node_name;
+            node_dataset.weight_exp      = "TMath::Abs(mc_raw_weight) * weight * mc_weight * reweight_factor_nlo_" + node_name;
+            cfg.datasets.push_back( node_dataset );
+          }
+        }
+      }
+      if(year == "2018"){
+        vector<string> b_datasets = { "2018_ggjets_v2.root", "2018_gjets1_v2.root", "zgjets.root", "wgjets.root", "ttjets.root", "ttgg.root", "ttgjets.root"};
+        for( string bname :  b_datasets ){
+          TrainDataset ggjets_dataset;
+          ggjets_dataset.input_path      = "./output/chanels_split_2018_v2/" + bname;
+          ggjets_dataset.signal          = false;
+          ggjets_dataset.train_tree_name = "train";
+          ggjets_dataset.data_tree_name  = "data";
+          ggjets_dataset.weight_exp      = "mc_weight * TMath::Abs(mc_raw_weight) * weight";
+          cfg.datasets.push_back( ggjets_dataset );
+        }
+
+        if( node_name.find("cHHH") != string::npos ){
+          TrainDataset node_dataset;
+          node_dataset.signal          = true;
+          node_dataset.input_path      = "./output/chanels_split_2018_v2/" + node_name + ".root";
+          node_dataset.train_tree_name = "train";
+          node_dataset.data_tree_name  = "data";
+          node_dataset.weight_exp      = "TMath::Abs(mc_raw_weight) * weight * mc_weight";
+          cfg.datasets.push_back( node_dataset );
+        } else { 
+          vector<string> benchmarks = {"sm", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"};
+          for(auto benchmark : benchmarks){
+            TrainDataset node_dataset;
+            node_dataset.signal          = true;
+            node_dataset.input_path      = "./output/chanels_split_2018_v2/" + benchmark + ".root";
+            node_dataset.train_tree_name = "train";
+            node_dataset.data_tree_name  = "data";
+            node_dataset.weight_exp      = "TMath::Abs(mc_raw_weight) * weight * mc_weight * reweight_factor_nlo_" + node_name;
             cfg.datasets.push_back( node_dataset );
           }
         }
@@ -214,7 +224,7 @@ void tmva_train(){
 
     string output_dir = "./output/tmva_" + cfg.year + "/";
     string postfix = "trainFULLSIMv2_" + cfg.name;
-    postfix = "t2_" + cfg.name;
+    postfix = "t5_" + cfg.name;
 
     TFile* outputFile = TFile::Open( (output_dir + "/TMVA_" + cfg.year + "_" + postfix + ".root").c_str(), "RECREATE" );
     TMVA::Factory *factory = new TMVA::Factory( "TMVA_" + cfg.year + "_" + postfix, outputFile, "" );
