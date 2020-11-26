@@ -369,17 +369,19 @@ void art_hist_maker_2017_reweighting(){ // 2018
 
   vector<dataset> datasets_sm = {
     dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/cHHH1.root", "mc_weight * TMath::Abs(mc_raw_weight) * weight",  "SM NLO Powheg",     "S"),
+    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/sm.root", "mc_weight * TMath::Abs(mc_raw_weight) * weight",  "Initial SM LO Madgraph",     "S"),
   };
   for(int j = 1; j < 13; j++){
     if(j == 8) continue;
     string node_alt = to_string(j);
     datasets_sm.push_back( dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/" + node_alt + ".root",    
-                                                   "mc_weight * TMath::Abs(mc_raw_weight) * weight * reweight_factor_nlo_sm",  "Sum EFT nodes reweight to NLO SM", "S") );
+                                   "mc_weight * TMath::Abs(mc_raw_weight) * weight * reweight_factor_nlo_sm", "Sum EFT nodes reweighted to NLO SM", "S") );
     datasets_sm.push_back( dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/" + node_alt + ".root",    
-                                                   "mc_weight * TMath::Abs(mc_raw_weight) * weight * reweight_factor_lo_sm",  "Sum EFT nodes reweight to LO SM", "S") );
+                                   "mc_weight * TMath::Abs(mc_raw_weight) * weight * reweight_factor_lo_sm",  "Sum EFT nodes reweighted to LO SM", "S") );
   }
   process_datasets(datasets_sm, variables, "reweight2017_sm_");
 
+  return;
   for(int i = 1; i < 13; i++){
     if(i == 8) continue;
     string node = to_string(i);
@@ -392,7 +394,7 @@ void art_hist_maker_2017_reweighting(){ // 2018
       if(i == j) continue;
       string node_alt = to_string(j);
       datasets.push_back( dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/" + node_alt + ".root",    
-                                  "mc_weight * TMath::Abs(mc_raw_weight) * weight * reweight_factor_nlo_" + node,  "EFT " + node_alt + " reweight to NLO EFT " + node,    "S") );
+                                  "mc_weight * TMath::Abs(mc_raw_weight) * weight * reweight_factor_nlo_" + node, "EFT " + node_alt + " reweight to NLO EFT " + node,    "S") );
       datasets.push_back( dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/" + node_alt + ".root",    
                                   "mc_weight * TMath::Abs(mc_raw_weight) * weight * reweight_factor_lo_" + node,  "EFT " + node_alt + " reweight to LO EFT " + node,    "S") );
     }

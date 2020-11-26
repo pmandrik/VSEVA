@@ -28,6 +28,24 @@ vector<double> get_CMS_EFT_benchmarks( string name, string year, bool cms_fake =
     answer[0] = answer[1];
     answer[1] = tr;
   }
+
+  if( name ==  "cHHH0" ) answer = {0.0, 1.0, 0.0, 0.0, 0.0};
+  if( name ==  "cHHH1" ) answer = {1.0, 1.0, 0.0, 0.0, 0.0};
+  if( name ==  "cHHH2" ) answer = {2.0, 1.0, 0.0, 0.0, 0.0};
+  if( name ==  "cHHH5" ) answer = {5.0, 1.0, 0.0, 0.0, 0.0};
+  
+  // 8a from https://link.springer.com/article/10.1007/JHEP09(2018)057
+  if( name ==  "8a" ) answer = {1.0, 1.0, 0.5, 0.8/3, 0.0};
+
+  // new benchmarks from https://arxiv.org/pdf/1908.08923.pdf
+  if( name == "JHEP03(2020)091_1" ) answer = { 3.94, 0.94, -1./3.,  0.5 * 1.5,  1./3. * (-3.)};
+  if( name == "JHEP03(2020)091_2" ) answer = { 6.84, 0.61,  1./3.,  0.0 * 1.5, -1./3. * (-3.)};
+  if( name == "JHEP03(2020)091_3" ) answer = { 2.21, 1.05, -1./3.,  0.5 * 1.5,   0.5  * (-3.)};
+  if( name == "JHEP03(2020)091_4" ) answer = { 2.79, 0.61,  1./3., -0.5 * 1.5,  1./6. * (-3.)};
+  if( name == "JHEP03(2020)091_5" ) answer = { 3.95, 1.17, -1./3., 1./6.* 1.5,  -0.5  * (-3.)};
+  if( name == "JHEP03(2020)091_6" ) answer = { 5.68, 0.83,  1./3., -0.5 * 1.5,  1./3. * (-3.)};
+  if( name == "JHEP03(2020)091_7" ) answer = {-0.10, 0.94,     1., 1./6.* 1.5, -1./6.  * (-3.)};
+
   return answer;
 }
 

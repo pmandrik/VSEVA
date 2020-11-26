@@ -182,14 +182,14 @@ void tmva_train(){
         }
       }
       if(year == "2018"){
-        vector<string> b_datasets = { "2018_ggjets_v2.root", "2018_gjets1_v2.root", "zgjets.root", "wgjets.root", "ttjets.root", "ttgg.root", "ttgjets.root"};
+        vector<string> b_datasets = { "dy.root", "zgjets.root", "wgjets.root", "ttjets.root", "ttgjets.root", "ttgg.root", "ggjets.root", "gjets.root" };
         for( string bname :  b_datasets ){
           TrainDataset ggjets_dataset;
           ggjets_dataset.input_path      = "./output/chanels_split_2018_v2/" + bname;
           ggjets_dataset.signal          = false;
           ggjets_dataset.train_tree_name = "train";
           ggjets_dataset.data_tree_name  = "data";
-          ggjets_dataset.weight_exp      = "mc_weight * TMath::Abs(mc_raw_weight) * weight";
+          ggjets_dataset.weight_exp      = "TMath::Abs(mc_raw_weight) * weight * mc_weight";
           cfg.datasets.push_back( ggjets_dataset );
         }
 

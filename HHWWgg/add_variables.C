@@ -120,73 +120,40 @@ void add_variables(string postfix_in_tree="_0"){ // "TMVA_2017_trainFULLSIMv1_SM
   for(int i = 1; i <= 12; i++) node_names.push_back( to_string(i) );
   vector<string> datasets, tree_names;
   vector<string> tmva_names, tmva_input_files;
-
-  /*
-  // DATASETS USED IN TRAINING
-  vector<string> train_datasets = list_files( "./output/chanels_split_2017/", "2017_all_fsim_v0.root" );
-  for(auto dataset : train_datasets ){
-    datasets.push_back( "./output/chanels_split_2017/" + dataset );
-    tree_names.push_back("data");
-  }
-
-  // DATA + ALL BACKGROUND
-  vector<string> sys_datasets = list_files( "./output/chanels_sys_2017/", "_ch78.root" );
-  for(auto dataset : sys_datasets ){
-    if(dataset.find( "Def_Events") == string::npos) continue;
-    // if(dataset.find( "_SM" ) != string::npos) continue;
-    // if(dataset.find( "_EFT" ) != string::npos) continue;
-
-    datasets.push_back( "./output/chanels_sys_2017/" + dataset );
-    tree_names.push_back("data");
-  }
-  */
-
-  // REWEIGHTED DATASETS
-  /*
-  vector<string> rew_datasets = list_files( "./output/reweighted_2017/", "_ch78.root" );
-  for(auto dataset : rew_datasets ){
-    if(dataset.find( "Def_Events") == string::npos) continue;
-    datasets.push_back( "./output/reweighted_2017/" + dataset );
-    tree_names.push_back("data");
-  }
-  */
   
   if(YEAR == "2018"){
     for(auto node : node_names){
-      tmva_names.push_back( "TMVA_" + YEAR + "_t2_" + node + "_BDT_b2" );
+      tmva_names.push_back( "TMVA_" + YEAR + "_t5_" + node + "_BDT_b2" );
       tmva_input_files.push_back( "./weights/" + tmva_names.at( tmva_names.size()-1) + ".weights.xml" );
     }
 
-    vector<string> sys_datasets = list_files( "/eos/user/p/pmandrik/HHWWgg_hzura/output_2018_v3_noSYS/", ".root" );
+    vector<string> sys_datasets = list_files( "/eos/user/p/pmandrik/HHWWgg_hzura/output_2018_v5_SYS/", ".root" );
     for(auto dataset : sys_datasets ){
-      datasets.push_back( "/eos/user/p/pmandrik/HHWWgg_hzura/output_2018_v3_noSYS/" + dataset );
+      datasets.push_back( "/eos/user/p/pmandrik/HHWWgg_hzura/output_2018_v5_SYS/" + dataset );
       tree_names.push_back("Def_Events");
     }
   }
   if(YEAR == "2017"){
     for(auto node : node_names){
-      tmva_names.push_back( "TMVA_" + YEAR + "_trainFULLSIMv1_" + node + "_BDT_b2" );
+      tmva_names.push_back( "TMVA_" + YEAR + "_t5_" + node + "_BDT_b2" );
       tmva_input_files.push_back( "./weights/" + tmva_names.at( tmva_names.size()-1) + ".weights.xml" );
     }
 
-    vector<string> sys_datasets = list_files( "/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/", ".root" );
+    vector<string> sys_datasets = list_files( "/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/", ".root" );
     for(auto dataset : sys_datasets ){
-      datasets.push_back( "/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/" + dataset );
+      datasets.push_back( "/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/" + dataset );
       tree_names.push_back("Def_Events");
     }
   }
   if(YEAR == "2016"){
-    node_names.push_back("cHHH0");
-    node_names.push_back("cHHH2");
-    node_names.push_back("cHHH5");
     for(auto node : node_names){
-      tmva_names.push_back( "TMVA_" + YEAR + "_trainFULLSIMv1_" + node + "_BDT_b2" );
+      tmva_names.push_back( "TMVA_" + YEAR + "_t5_" + node + "_BDT_b2" );
       tmva_input_files.push_back( "./weights/" + tmva_names.at( tmva_names.size()-1) + ".weights.xml" );
     }
 
-    vector<string> sys_datasets = list_files( "/eos/user/p/pmandrik/HHWWgg_hzura/output_2016_v2_SYS/", ".root" );
+    vector<string> sys_datasets = list_files( "/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/", ".root" );
     for(auto dataset : sys_datasets ){
-      datasets.push_back( "/eos/user/p/pmandrik/HHWWgg_hzura/output_2016_v2_SYS/" + dataset );
+      datasets.push_back( "/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/" + dataset );
       tree_names.push_back("Def_Events");
     }
   }
