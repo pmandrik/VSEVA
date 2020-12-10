@@ -14,14 +14,23 @@ void set_input_files(string node, string year, string & TMVA_NAME, string & inpu
   if(year == "2018"){
     TMVA_NAME = "weight_TMVA_2018_t2_" + node + "_BDT_b2_0";
     input_data_file_name = "/eos/user/p/pmandrik/HHWWgg_hzura/output_2018_v3_noSYS/data_2018_v2.root";
+
+    TMVA_NAME = "weight_TMVA_2018_t5_" + node + "_BDT_b2_0";
+    input_data_file_name = "/eos/user/p/pmandrik/HHWWgg_hzura/output_2018_v5_SYS/data_2018.root";
   }
   if(year == "2017"){
     TMVA_NAME = "weight_TMVA_2017_trainFULLSIMv1_" + node + "_BDT_b2_021";
     input_data_file_name = "/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/data_2017_plusF.root";
+
+    TMVA_NAME = "weight_TMVA_2017_t5_" + node + "_BDT_b2_0";
+    input_data_file_name = "/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/data_2017.root";
   }
   if(year == "2016"){
     TMVA_NAME = "weight_TMVA_2016_trainFULLSIMv1_" + node + "_BDT_b2_020";
     input_data_file_name = "/eos/user/p/pmandrik/HHWWgg_hzura/output_2016_v2_SYS/data_2016_v2.root";
+
+    TMVA_NAME = "weight_TMVA_2016_t5_" + node + "_BDT_b2_0";
+    input_data_file_name = "/eos/user/p/pmandrik/HHWWgg_hzura/output_2016_v5_SYS/data_2016.root";
   }
 }
 

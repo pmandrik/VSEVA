@@ -1,3 +1,4 @@
+// P.Mandrik, IHEP, 2020
 
 // Return EFT benchmarks definition as https://arxiv.org/pdf/1710.08261.pdf
 vector<double> get_CMS_EFT_benchmarks( string name, string year, bool cms_fake = false ){
@@ -29,24 +30,30 @@ vector<double> get_CMS_EFT_benchmarks( string name, string year, bool cms_fake =
     answer[1] = tr;
   }
 
-  if( name ==  "cHHH0" ) answer = {0.0, 1.0, 0.0, 0.0, 0.0};
-  if( name ==  "cHHH1" ) answer = {1.0, 1.0, 0.0, 0.0, 0.0};
-  if( name ==  "cHHH2" ) answer = {2.0, 1.0, 0.0, 0.0, 0.0};
-  if( name ==  "cHHH5" ) answer = {5.0, 1.0, 0.0, 0.0, 0.0};
+  if( name ==  "cHHH0" ) answer = {0.0,  1.0, 0.0, 0.0, 0.0};
+  if( name ==  "cHHH2" ) answer = {2.45, 1.0, 0.0, 0.0, 0.0};
+  if( name ==  "cHHH5" ) answer = {5.0,  1.0, 0.0, 0.0, 0.0};
   
   // 8a from https://link.springer.com/article/10.1007/JHEP09(2018)057
   if( name ==  "8a" ) answer = {1.0, 1.0, 0.5, 0.8/3, 0.0};
 
-  // new benchmarks from https://arxiv.org/pdf/1908.08923.pdf
-  if( name == "JHEP03(2020)091_1" ) answer = { 3.94, 0.94, -1./3.,  0.5 * 1.5,  1./3. * (-3.)};
-  if( name == "JHEP03(2020)091_2" ) answer = { 6.84, 0.61,  1./3.,  0.0 * 1.5, -1./3. * (-3.)};
-  if( name == "JHEP03(2020)091_3" ) answer = { 2.21, 1.05, -1./3.,  0.5 * 1.5,   0.5  * (-3.)};
-  if( name == "JHEP03(2020)091_4" ) answer = { 2.79, 0.61,  1./3., -0.5 * 1.5,  1./6. * (-3.)};
-  if( name == "JHEP03(2020)091_5" ) answer = { 3.95, 1.17, -1./3., 1./6.* 1.5,  -0.5  * (-3.)};
-  if( name == "JHEP03(2020)091_6" ) answer = { 5.68, 0.83,  1./3., -0.5 * 1.5,  1./3. * (-3.)};
-  if( name == "JHEP03(2020)091_7" ) answer = {-0.10, 0.94,     1., 1./6.* 1.5, -1./6.  * (-3.)};
+  // New benchmarks from https://arxiv.org/pdf/1908.08923.pdf
+  if( name == "JHEP03(2020)091_1" or name == "1b") answer = {  3.94, 0.94, -1./3.,  0.5 * 1.5,  1./3. * (-3.) };
+  if( name == "JHEP03(2020)091_2" or name == "2b") answer = {  6.84, 0.61,  1./3.,  0.0 * 1.5, -1./3. * (-3.) };
+  if( name == "JHEP03(2020)091_3" or name == "3b") answer = {  2.21, 1.05, -1./3.,  0.5 * 1.5,   0.5  * (-3.) };
+  if( name == "JHEP03(2020)091_4" or name == "4b") answer = {  2.79, 0.61,  1./3., -0.5 * 1.5,  1./6. * (-3.) };
+  if( name == "JHEP03(2020)091_5" or name == "5b") answer = {  3.95, 1.17, -1./3., 1./6.* 1.5,  -0.5  * (-3.) };
+  if( name == "JHEP03(2020)091_6" or name == "6b") answer = {  5.68, 0.83,  1./3., -0.5 * 1.5,  1./3. * (-3.) };
+  if( name == "JHEP03(2020)091_7" or name == "7b") answer = { -0.10, 0.94,     1., 1./6.* 1.5, -1./6. * (-3.) };
 
   return answer;
+}
+
+vector<string> get_benchmarks_names(){
+  vector<string> benchmars = {"sm", "box", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", 
+                              "8a", "cHHH0", "cHHH2", "cHHH5", 
+                              "JHEP03(2020)091_1", "JHEP03(2020)091_2", "JHEP03(2020)091_3", "JHEP03(2020)091_4", "JHEP03(2020)091_5", "JHEP03(2020)091_6", "JHEP03(2020)091_7"};
+  return benchmars;
 }
 
 // HH xsection using expression from https://arxiv.org/abs/1806.05162
@@ -349,6 +356,52 @@ void make_prediction_hists(){
   }
 }
 
+// create hists with the k-factors ==============================================================================
+void make_reweighting_hists(){
+  ReweightGudrin   rg = ReweightGudrin();
+  vector<string> bms = {"SM", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "box", 
+                        "8a", "cHHH0", "cHHH2", "cHHH5",
+                        "1b", "2b", "3b", "4b", "5b", "6b", "7b"};
+
+  TFile * file  = new TFile("reweight_HH.root", "RECREATE");
+  TH1D  * hxsec = new TH1D("xsections", "xsections", 2*bms.size()+10,  0, 2*bms.size()+10);
+  hxsec->SetOption("hist");
+
+  for(string bm : bms){
+    auto couplings_rg = rg.GetEFTBenchmark(bm);
+
+    // Gudrin reweighting == >
+    double start_x = 240;
+    double end_x   = 1040;
+    double width   = 20;
+    int nbins   = int( (end_x-start_x)/width );
+    TH1D* h1 = new TH1D(("EFT_"+bm +"_LO").c_str(), ("EFT_"+bm +"_LO").c_str(), nbins,  start_x, end_x);
+    TH1D* h2 = new TH1D(("EFT_"+bm +"_NLO").c_str(), ("EFT_"+bm +"_NLO").c_str(), nbins, start_x, end_x);
+    TH1D* h3 = new TH1D(("EFT_"+bm +"_NLO_div_LO").c_str(), ("EFT_"+bm +"_LO_to_NLO").c_str(), nbins, start_x, end_x);
+    h1->SetOption("hist");
+    h2->SetOption("hist");
+    h3->SetOption("hist");
+
+    double dXsec;
+    for(int i = 0; i < nbins; i++){
+      double mass = start_x + width * i + width/2;
+      dXsec   = rg.GetDiffXsection( mass, couplings_rg, "lo" );
+      h1->Fill( start_x + 20 * i, dXsec );
+      dXsec  = rg.GetDiffXsection( mass, couplings_rg, "nlo" );
+      h2->Fill( start_x + 20 * i, dXsec );
+    }
+
+    h3->Add( h2 );
+    h3->Divide( h1 );
+
+    cout << bm << " " << get_eft_xsec(bm, "lo") << " " << get_eft_xsec(bm, "nlo") << endl;
+    hxsec->Fill( ("EFT_"+bm +"_LO").c_str(),  get_eft_xsec(bm, "lo") );
+    hxsec->Fill( ("EFT_"+bm +"_NLO").c_str(), get_eft_xsec(bm, "nlo") );
+  }
+  file->Write();
+  file->Close();
+}
+
 // usage example ==============================================================================
 void reweight_example(){
   // preparation ... ==============================================================================
@@ -422,7 +475,8 @@ void reweight_example(){
 
 void reweight_HH(){
   // make_prediction_hists();
-  reweight_example();
+  make_reweighting_hists();
+  // reweight_example();
 }
 
 

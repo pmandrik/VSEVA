@@ -108,7 +108,7 @@ void tmva_train(){
   vector<string> node_names = {"sm", "cHHH0", "cHHH1", "cHHH2", "cHHH5"};
   for(int i = 1; i <= 12; i++) node_names.push_back( to_string(i) );
   // vector<string> years = {"2016", "2017", "2018"};
-  vector<string> years = {"2018"} ;
+  vector<string> years = {"2016"} ;
 
   vector<TrainCfg> node_cfgs;
   for(auto year : years){
@@ -118,28 +118,31 @@ void tmva_train(){
       cfg.name = node_name;
 
       if(year == "2016"){
-        TrainDataset ggjets_dataset;
-        ggjets_dataset.input_path      = "./output/chanels_split_2016/ggjets_v2.root";
-        ggjets_dataset.signal          = false;
-        ggjets_dataset.train_tree_name = "train";
-        ggjets_dataset.data_tree_name  = "data";
-        ggjets_dataset.weight_exp      = "weight * mc_weight";
-        cfg.datasets.push_back( ggjets_dataset );
+        vector<string> b_datasets = { "dy.root", "zgjets.root", "wgjets.root", "ttjets.root", "ttgjets.root", "ttgg.root", "ggjets.root", "gjets.root" };
+        for( string bname :  b_datasets ){
+          TrainDataset ggjets_dataset;
+          ggjets_dataset.input_path      = "./output/chanels_split_2016_v2/" + bname;
+          ggjets_dataset.signal          = false;
+          ggjets_dataset.train_tree_name = "train";
+          ggjets_dataset.data_tree_name  = "data";
+          ggjets_dataset.weight_exp      = "mc_weight * TMath::Abs(mc_raw_weight) * weight";
+          cfg.datasets.push_back( ggjets_dataset );
+        }
 
         if( node_name.find("cHHH") != string::npos ){
           TrainDataset node_dataset;
           node_dataset.signal          = true;
-          node_dataset.input_path      = "./output/chanels_split_2016/hzura_" + node_name + "_v2.root";
+          node_dataset.input_path      = "./output/chanels_split_2016_v2/" + node_name + ".root";
           node_dataset.train_tree_name = "train";
           node_dataset.data_tree_name  = "data";
           node_dataset.weight_exp      = "TMath::Abs(mc_raw_weight) * weight * mc_weight";
           cfg.datasets.push_back( node_dataset );
         } else { 
-          vector<string> benchmarks = {"sm", "1", "2", "3", "4", "5", "6", "7", "8", "9", "12"};
+          vector<string> benchmarks = {"sm", "1", "2", "3", "4", "5", "6", "7", "9", "10", "11", "12"};;
           for(auto benchmark : benchmarks){
             TrainDataset node_dataset;
             node_dataset.signal          = true;
-            node_dataset.input_path      = "./output/chanels_split_2016/hzura_2017_" + benchmark + "_fsim_v2.root";
+            node_dataset.input_path      = "./output/chanels_split_2016_v2/" + benchmark + ".root";
             node_dataset.train_tree_name = "train";
             node_dataset.data_tree_name  = "data";
             node_dataset.weight_exp      = "TMath::Abs(mc_raw_weight) * weight * mc_weight * reweight_factor_nlo_" + node_name;

@@ -115,7 +115,7 @@ void * tmva_add_wrapper(void * a){
 
 void add_variables(string postfix_in_tree="_0"){ // "TMVA_2017_trainFULLSIMv1_SM_BDT_b2_020"
 
-  string YEAR = "2018"; // "_021"
+  string YEAR = "2016"; // "_021"
   vector<string> node_names = { "sm", "cHHH0", "cHHH1", "cHHH2", "cHHH5" };
   for(int i = 1; i <= 12; i++) node_names.push_back( to_string(i) );
   vector<string> datasets, tree_names;
@@ -151,9 +151,9 @@ void add_variables(string postfix_in_tree="_0"){ // "TMVA_2017_trainFULLSIMv1_SM
       tmva_input_files.push_back( "./weights/" + tmva_names.at( tmva_names.size()-1) + ".weights.xml" );
     }
 
-    vector<string> sys_datasets = list_files( "/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/", ".root" );
+    vector<string> sys_datasets = list_files( "/eos/user/p/pmandrik/HHWWgg_hzura/output_2016_v5_SYS/", ".root" );
     for(auto dataset : sys_datasets ){
-      datasets.push_back( "/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/" + dataset );
+      datasets.push_back( "/eos/user/p/pmandrik/HHWWgg_hzura/output_2016_v5_SYS/" + dataset );
       tree_names.push_back("Def_Events");
     }
   }

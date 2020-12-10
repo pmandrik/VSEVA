@@ -10,6 +10,25 @@ root -l -b -q tmva_train.C
 
 namespace vseva {
 
+  void check(){
+           const Int_t n = 20;
+           Double_t x[n], y[n];
+           for (Int_t i=0;i<n;i++) {
+              x[i] = i*0.1;
+              y[i] = 10*sin(x[i]+0.2);
+           }
+           TGraph * gr = new TGraph(n,x,y);
+           gr->Draw("ACP");
+           gr->SetLineColor(2);
+           gr->SetLineWidth(4);
+           gr->SetMarkerColor(4);
+           gr->SetMarkerSize(1.5);
+           gr->SetMarkerStyle(21);
+           gr->SetTitle("Option ACP example");
+           gr->GetXaxis()->SetTitle("X title");
+           gr->GetYaxis()->SetTitle("Y title");
+  }
+
   class DataSet {
     public:
     DataSet(){}
@@ -310,6 +329,7 @@ namespace vseva {
         signal_scale = 1;
         corr_draw_option = "SCAT";
         maxh_v_scale_factor = 1.75;
+        draw_residual = true;
       }
 
       vector<TMP_hist_type*> signals, backgrounds, datas;
@@ -318,6 +338,7 @@ namespace vseva {
       string label_x, label_y, corr_draw_option;
       double xmin, xmax, ymin, ymax;
       double signal_scale, maxh_v_scale_factor;
+      bool draw_residual;
 
       void Print(){
         cout << "mRoot::HistDrawer.Print() " << endl;
@@ -338,36 +359,36 @@ namespace vseva {
         hist->GetXaxis()->SetTitle( label_x.c_str() );
 
         hist->GetYaxis()->CenterTitle();
-        hist->GetYaxis()->SetNdivisions(510);
+        // hist->GetYaxis()->SetNdivisions(510);
 
         hist->GetYaxis()->SetLabelFont(132);
         hist->GetYaxis()->SetLabelOffset(0.02);
-        hist->GetYaxis()->SetLabelSize(0.04);
+        hist->GetYaxis()->SetLabelSize(0.03);
         hist->GetYaxis()->SetTitleFont(132);
         hist->GetYaxis()->SetTitleOffset(1.5);
-        hist->GetYaxis()->SetTitleSize(0.045);
+        hist->GetYaxis()->SetTitleSize(0.040);
 
         hist->GetXaxis()->SetLabelFont(132);
         hist->GetXaxis()->SetLabelOffset(0.02);
-        hist->GetXaxis()->SetLabelSize(0.04);
+        hist->GetXaxis()->SetLabelSize(0.03);
         hist->GetXaxis()->SetTitleFont(132);
         hist->GetXaxis()->SetTitleOffset(1.5);
-        hist->GetXaxis()->SetTitleSize(0.045);
+        hist->GetXaxis()->SetTitleSize(0.040);
         hist->SetStats(false);
       }
 
       void SetStyle(){
         std::vector <int> colors = getNiceColors();
         int color = 0;
-        int signal_color = 2;
+        int signal_color = 3;
 
         for(auto hist : signals){
-          // hist->SetLineColor( signal_color++ );
-          hist->SetLineColor( colors.at(color++) );
+          hist->SetLineColor( signal_color++ );
+          // hist->SetLineColor( colors.at(color++) );
           // hist->SetLineWidth( 5 );
           // hist->SetLineStyle( 7 );
 
-          hist->SetLineWidth( 2 );
+          hist->SetLineWidth( 3 );
           SetStyleHist(hist);
 
           if(xmin != xmax) hist->GetXaxis()->SetRangeUser(xmin, xmax);
@@ -457,12 +478,19 @@ namespace vseva {
         for(auto hist : datas)       hist->Draw("same E1");
       }
 
-      void DrawHistsStack(){
-        THStack * hs = new THStack("stack", "stack");
-        for(auto hist : backgrounds){
+      THStack * GetStack(){
+        THStack * hs = new THStack();
+        vector <TMP_hist_type*> backgrounds_sorted = backgrounds;
+        std::sort(std::begin(backgrounds_sorted), std::end(backgrounds_sorted), [](TMP_hist_type* a, TMP_hist_type* b) {return a->Integral() > b->Integral(); });
+        for( auto hist : backgrounds_sorted ){
           hist->SetFillColor( hist->GetLineColor() );
           hs->Add(hist);
         }
+        return hs;
+      }
+
+      void DrawHistsStack(){
+        THStack * hs = GetStack();
         SetMaximumStack( hs );
         hs->Draw("hist");
         for(auto hist : signals) hist->Draw("same hist");
@@ -483,21 +511,20 @@ namespace vseva {
         }
       }
 
-      void DrawHistsTMVA(){
-        THStack * hs = new THStack();
+      void DrawHistsTMVA(TCanvas * canv){
+        canv->cd();
+        THStack * hs = GetStack();
         double sum_integral = 0;
-        for(auto hist : backgrounds){
+        for( auto hist : backgrounds ){
           sum_integral += hist->Integral();
-          hist->SetFillColor( hist->GetLineColor() );
-          hist->Print();
-          hs->Add(hist);
         }
+
         double alt_sum_integral = 0;
         for(auto hist : datas){
           alt_sum_integral += hist->Integral();
         }
         sum_integral = TMath::Max(sum_integral, alt_sum_integral);
-        if( backgrounds.size() + datas.size() < 1 and signals.size() > 0){
+        if( backgrounds.size() + datas.size() < 1 and signals.size() > 0 ){
           sum_integral = signals.at(0)->Integral();
         }
         //for(auto hist : backgrounds)
@@ -532,6 +559,98 @@ namespace vseva {
         else if( datas.size() ){
           hs->GetXaxis()->SetTitle( datas.at(0)->GetXaxis()->GetTitle() );
           hs->GetYaxis()->SetTitle( datas.at(0)->GetYaxis()->GetTitle() );
+        }
+
+        // Residual =-=-=-=-=-= =-=-=-=-=-= =-=-=-=-=-=
+        if( draw_residual and datas.size() and backgrounds.size() ){
+          double residial_height = 0.33;
+          TPad *pad_res = new TPad("p3","p3", 0.0, 0.0, 1.0, residial_height);
+          pad_res->Draw();
+          pad_res->SetLeftMargin(0.14); 
+          pad_res->SetRightMargin(0.08); 
+          pad_res->SetBottomMargin(0.50); 
+          pad_res->SetTopMargin(0.03); 
+          pad_res->cd();
+          
+          TMP_hist_type total_backgrounds( *(backgrounds.at(0)) );
+          total_backgrounds.Sumw2();
+          for(int i = 1; i < backgrounds.size(); i++) total_backgrounds.Add( backgrounds.at(i) );
+          double rmin, rmax;
+          for(int i = 0; i < 1; i++){
+            TMP_hist_type * data = datas.at( i );
+            TMP_hist_type * rhist = new TMP_hist_type( *data );
+            rhist->Sumw2();
+            rhist->Add( & total_backgrounds, -1.);
+            rhist->Draw("p0e1");
+
+            rmin = rhist->GetMinimum();
+            rmax = rhist->GetMaximum();
+
+            rhist->GetYaxis()->SetTitle( "ratio" );
+            rhist->GetYaxis()->SetLabelFont(132);
+            rhist->GetYaxis()->SetLabelOffset(0.02);
+            rhist->GetYaxis()->SetLabelSize(0.05);
+            rhist->GetYaxis()->SetTitleFont(132);
+            rhist->GetYaxis()->SetTitleOffset(1.25);
+            rhist->GetYaxis()->SetTitleSize(0.08);
+
+            rhist->GetXaxis()->SetTitle( label_x.c_str() );
+            rhist->GetXaxis()->SetLabelFont(132);
+            rhist->GetXaxis()->SetLabelOffset(0.08);
+            rhist->GetXaxis()->SetLabelSize(0.08);
+            rhist->GetXaxis()->SetTitleFont(132);
+            rhist->GetXaxis()->SetTitleOffset(1.5);
+            rhist->GetXaxis()->SetTitleSize(0.12);
+            rhist->SetStats(false);
+          }
+          for(int i = 0; i < 3; i++){
+            vector<double> vals = {rmin*0.75, 0, rmax*0.75};
+            double y_val = vals.at( i );
+            auto l = new TLine( total_backgrounds.GetXaxis()->GetXmin(), y_val, total_backgrounds.GetXaxis()->GetXmax(), y_val );
+            l->SetLineColor( 2 );
+            l->SetLineWidth( 2 );
+            l->SetLineStyle( 7 );
+            l->Draw();
+          }
+          for(int i = 0; i < datas.size(); i++){
+            TMP_hist_type * data = datas.at( i );
+            TMP_hist_type * rhist = new TMP_hist_type( *data );
+            rhist->Sumw2();
+            rhist->Add( & total_backgrounds, -1.);
+            rhist->Draw("p0e1 same");
+
+            rhist->GetYaxis()->SetTitle( "ratio" );
+            rhist->GetYaxis()->SetLabelFont(132);
+            rhist->GetYaxis()->SetLabelOffset(0.02);
+            rhist->GetYaxis()->SetLabelSize(0.05);
+            rhist->GetYaxis()->SetTitleFont(132);
+            rhist->GetYaxis()->SetTitleOffset(1.25);
+            rhist->GetYaxis()->SetTitleSize(0.08);
+
+            rhist->GetXaxis()->SetTitle( label_x.c_str() );
+            rhist->GetXaxis()->SetLabelFont(132);
+            rhist->GetXaxis()->SetLabelOffset(0.08);
+            rhist->GetXaxis()->SetLabelSize(0.08);
+            rhist->GetXaxis()->SetTitleFont(132);
+            rhist->GetXaxis()->SetTitleOffset(1.5);
+            rhist->GetXaxis()->SetTitleSize(0.12);
+            rhist->SetStats(false);
+          }
+
+          canv->cd();
+          TPad *pad_main = new TPad("p1","p1", 0.0, residial_height, 1.0, 1.0);
+          pad_main->Draw();
+          pad_main->SetLeftMargin(0.14); 
+          pad_main->SetRightMargin(0.08); 
+          pad_main->SetBottomMargin(0.03); 
+          pad_main->cd();
+
+          hs->Draw("hist");
+          hs->GetXaxis()->SetLabelOffset(999.);
+          hs->GetXaxis()->SetTitleOffset(999.);
+
+          for(auto hist : signals) hist->Draw("same hist");
+          for(auto hist : datas)   hist->Draw("same E1");
         }
       }
 
@@ -597,12 +716,12 @@ namespace vseva {
         // TODO data ?
       }
 
-      TLegend * GetLegend(float x1=0.55, float y1=0.65, float x2=0.90, float y2=0.88){
-        TLegend * legend = new TLegend(x1,y1,x2,y2);
-        legend->SetFillColor(0);
-        legend->SetFillStyle(3001);
-        legend->SetLineColor(0);
-        legend->SetTextFont(font) ;
+      TLegend * GetLegend(float x1=0.55, float y1=0.65, float x2=0.875, float y2=0.88){
+        cout << 1 << endl; TLegend * legend = new TLegend(x1,y1,x2,y2);
+        // cout << 1 << endl; legend->SetFillColor(0); not worked with CMSSW 10_2_13
+        cout << 3 << endl; legend->SetFillStyle(3001);
+        // cout << 4 << endl; legend->SetLineColor(0); not worked with CMSSW 10_2_13
+        cout << 5 << endl; legend->SetTextFont(font) ;
         for(auto hist : datas)
           legend->AddEntry(hist, hist->GetTitle(), "p");
         for(auto hist : signals)
@@ -640,10 +759,9 @@ namespace vseva {
       }
 
       TLatex * GetText(string text_src, float x = 0.23, float y = 0.82, float text_size = 0.044){
-        cout << "THIS " << endl;
         TLatex * text = new TLatex(x, y, text_src.c_str());
-        text->SetNDC(kTRUE) ;
-        text->SetTextSize(text_size) ;
+        text->SetNDC(true) ;
+        //text->SetTextSize(text_size) ;
         text->SetTextFont(font) ;
         return text;
       }
@@ -654,13 +772,13 @@ namespace vseva {
       TCanvas * GetCanvas(string name, int size_x = 600, int size_y = 600){
         TCanvas * canvas = new TCanvas(name.c_str(), name.c_str(), size_x, size_y);
         canvas->SetTicks(1,1);
-        canvas->SetLeftMargin(0.14); 
-        canvas->SetRightMargin(0.08); 
-        canvas->SetBottomMargin(0.20); 
         gStyle->SetOptStat(0000000);
         gStyle->SetTextFont(font);
         gStyle->SetOptTitle(0);
         if(logY) canvas->SetLogy();
+        canvas->SetLeftMargin(0.14); 
+        canvas->SetRightMargin(0.08); 
+        canvas->SetBottomMargin(0.20); 
         return canvas;
       }
 
@@ -739,19 +857,19 @@ namespace vseva {
       rtext->Draw() ;
       etext->Draw() ;
     } else if(mode == "tmva"){
-      drawer->logY = false;
-      drawer->label_x = label;
       cout << " .... set style" << endl;
+      drawer->label_x = label;
       drawer->SetStyle();
       cout << " .... get canvas" << endl;
       canvas = drawer->GetCanvas( name );
       cout << " .... DRAW" << endl;
-      drawer->DrawHistsTMVA();
+      drawer->DrawHistsTMVA( canvas );
       cout << " .... DRAW ok" << endl;
-      auto legend = drawer->GetLegend();
-      auto ltext  = drawer->GetLeftText( leftText );
-      auto rtext  = drawer->GetRightText( rightText );
-      auto etext  = drawer->GetText(extra_title, 0.23, 0.92);
+      cout << " .... DRAW ok" << endl;auto legend = drawer->GetLegend();
+      cout << " .... DRAW ok" << endl;auto ltext  = drawer->GetLeftText( leftText );
+      cout << " .... DRAW ok" << endl;auto rtext  = drawer->GetRightText( rightText );
+      cout << " .... DRAW ok" << endl;auto etext  = drawer->GetText(extra_title, 0.23, 0.92);
+      cout << legend << " " << ltext << " " << rtext << " " << etext << endl;
       legend->Draw();
       ltext->Draw() ;
       rtext->Draw() ;
@@ -800,12 +918,13 @@ namespace vseva {
     } else {
       cout << "draw_hists_FCC(): wrong draw mode = " << mode << endl;;
     }
-    canvas->SetTicks(1,1);
-
+/*
+    canvas->SetTicks(1,1)
     canvas->RedrawAxis();
     canvas->GetFrame()->SetBorderSize( 12 );
     canvas->Modified();
     canvas->Update();
+*/
     canvas->Print( (path + "/" + name).c_str() );
     return canvas;
   }

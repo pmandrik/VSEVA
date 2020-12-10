@@ -131,88 +131,110 @@ void make_correlation_plot(vector<dataset> datasets, vector<PlotVariable> variab
   canv->Print( ("output_test/Cor" + postfix + ".pdf").c_str() );
 }
 
-void art_hist_maker_2017(){
+void art_hist_maker( string year ){
   string blind_cut   = " * (m_yy < 115 || m_yy > 135)";
   string lumi_weight = " * 41.05";
-
   string b_weight = "mc_weight * TMath::Abs(mc_raw_weight) * weight" + lumi_weight + blind_cut;
-  // lumi_weight = xsection / sum_of_raw_weights
-  // mc_weight   = lumi_weight * sign( mc_raw_weight )
 
-  // string key, string lab, int nbins, double min, double max, string process_name = "", string expression, string weight_expression
-  vector<PlotVariable> variables = {
-    PlotVariable("m_yy", "m_{#gamma#gamma}", 25, 100, 160),
-    PlotVariable("H_WW_tlv->M()", "m_{WW}",  20, 125, 500),
-    PlotVariable("dR_yy * H_yy_tlv->Pt() / m_yy", "#Delta R(#gamma,#gamma) p_{T}^{H_{#gamma#gamma}} / m_{#gamma#gamma}", 25, 0., 5.),
-    PlotVariable("dR_jj", "#Delta R(j,j)", 25, 0., 5.),
-    PlotVariable("dR_WW", "#Delta R(W,W)", 25, 0., 5.),
-    PlotVariable("dR_HH", "#Delta R(H,H)", 25, 0., 5.),
-    PlotVariable("TMath::Abs( dPhi_nuL )", "|#Delta#phi(#nu,l)|", 25, 0., 3.14),
-    PlotVariable("y1_tlv->Et()/m_yy", "E_{T}^{#gamma_{1}} / m_{#gamma#gamma}", 25, 0., 3),
-    PlotVariable("y2_tlv->Et()/m_yy", "E_{T}^{#gamma_{2}} / m_{#gamma#gamma}", 25, 0., 3),
-    PlotVariable("yy_mva", "flashgg MVA_{#gamma#gamma}", 25, 0., 1),
-    PlotVariable("TMath::Abs( H_yy_tlv->CosTheta() )", "H cos #theta", 25, 0., 1),
-    PlotVariable("TMath::Abs( lep_leading_tlv->Eta() )", "|#eta_{l}|", 25, 0., 2.5),
-    PlotVariable("TMath::Abs( y1_tlv->Eta() )+TMath::Abs( y2_tlv->Eta() )+TMath::Abs( ljet1_tlv->Eta() )+TMath::Abs( ljet2_tlv->Eta() )", "|#eta_{#gamma_{1}}|+|#eta_{#gamma_{2}}|+|#eta_{j_{1}}|+|#eta_{j_{2}}|", 25, 0., 9.),
-    PlotVariable("weight_TMVA_2017_trainFULLSIMv1_sm_BDT_b2_020", "BDT score", 25, -1, 1.),
-  };
+  vector<PlotVariable>     variables = {
+      PlotVariable("m_yy", "m_{#gamma#gamma}", 15, 100, 160),
+      PlotVariable("H_WW_tlv->M()", "m_{WW}",  15, 125, 500),
+      PlotVariable("dR_yy * H_yy_tlv->Pt() / m_yy", "#Delta R(#gamma,#gamma) p_{T}^{H_{#gamma#gamma}} / m_{#gamma#gamma}", 15, 0., 5.),
+      PlotVariable("dR_jj", "#Delta R(j,j)", 15, 0., 5.),
+      PlotVariable("dR_WW", "#Delta R(W,W)", 15, 0., 5.),
+      PlotVariable("dR_HH", "#Delta R(H,H)", 15, 0., 5.),
+      PlotVariable("TMath::Abs( dPhi_nuL )", "|#Delta#phi(#nu,l)|", 15, 0., 3.14),
+      PlotVariable("y1_tlv->Et()/m_yy", "E_{T}^{#gamma_{1}} / m_{#gamma#gamma}", 15, 0., 1.5),
+      PlotVariable("y2_tlv->Et()/m_yy", "E_{T}^{#gamma_{2}} / m_{#gamma#gamma}", 15, 0., 1.5),
+      PlotVariable("yy_mva", "flashgg MVA_{#gamma#gamma}", 15, -1, 1),
+      PlotVariable("TMath::Abs( H_yy_tlv->CosTheta() )", "H cos #theta", 15, 0., 1),
+      PlotVariable("TMath::Abs( lep_leading_tlv->Eta() )", "|#eta_{l}|", 15, 0., 2.5),
+      PlotVariable("TMath::Abs( y1_tlv->Eta() )+TMath::Abs( y2_tlv->Eta() )+TMath::Abs( ljet1_tlv->Eta() )+TMath::Abs( ljet2_tlv->Eta() )", "|#eta_{#gamma_{1}}|+|#eta_{#gamma_{2}}|+|#eta_{j_{1}}|+|#eta_{j_{2}}|", 15, 0., 9.),
+    };
+  vector<dataset> datasets;
 
-  vector<dataset> datasets = {
-    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/hzura_2017_sm_fsim_v2.root", "weight * reweight_factor_nlo_sm",  "SM",     "S"),
-  /*dataset("./output/chanels_split_2017/hzura_2017_all_fsim_v0.root", "weight * weight_nlo_0 / weight_initial_v0",   "EFT 0",  "S"),
-    dataset("./output/chanels_split_2017/hzura_2017_all_fsim_v0.root", "weight * weight_nlo_1 / weight_initial_v0",   "EFT 1",  "S"),
-    dataset("./output/chanels_split_2017/hzura_2017_all_fsim_v0.root", "weight * weight_nlo_2 / weight_initial_v0",   "EFT 2",  "S"),
-    dataset("./output/chanels_split_2017/hzura_2017_all_fsim_v0.root", "weight * weight_nlo_3 / weight_initial_v0",   "EFT 3",  "S"),
-    dataset("./output/chanels_split_2017/hzura_2017_all_fsim_v0.root", "weight * weight_nlo_4 / weight_initial_v0",   "EFT 4",  "S"),
-    dataset("./output/chanels_split_2017/hzura_2017_all_fsim_v0.root", "weight * weight_nlo_5 / weight_initial_v0",   "EFT 5",  "S"),
-    dataset("./output/chanels_split_2017/hzura_2017_all_fsim_v0.root", "weight * weight_nlo_6 / weight_initial_v0",   "EFT 6",  "S"),
-    dataset("./output/chanels_split_2017/hzura_2017_all_fsim_v0.root", "weight * weight_nlo_7 / weight_initial_v0",   "EFT 7",  "S"),
-    dataset("./output/chanels_split_2017/hzura_2017_all_fsim_v0.root", "weight * weight_nlo_8 / weight_initial_v0",   "EFT 8",  "S"),
-    dataset("./output/chanels_split_2017/hzura_2017_all_fsim_v0.root", "weight * weight_nlo_9 / weight_initial_v0",   "EFT 9",  "S"),
-    dataset("./output/chanels_split_2017/hzura_2017_all_fsim_v0.root", "weight * weight_nlo_10 / weight_initial_v0",  "EFT 10", "S"),
-    dataset("./output/chanels_split_2017/hzura_2017_all_fsim_v0.root", "weight * weight_nlo_11 / weight_initial_v0",  "EFT 11", "S"),*/
-    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/vh_2017_v2.root",  b_weight, "SM H", "B"),
-    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/vbf_2017_v2.root", b_weight, "SM H", "B"),
-    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/ttH_2017_v2.root", b_weight, "SM H", "B"),
-    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/ggh_2017_v2.root", b_weight, "SM H", "B"),
-
-    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/ggjets_2017_v2.root", b_weight, "#gamma#gamma+jets", "B"),
-    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/gjets_2017_v2.root", b_weight, "#gamma+jets", "B"),
-    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/zgjets.root",  b_weight, "V#gamma+jets", "B"),
-    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/wgjets.root",  b_weight, "V#gamma+jets", "B"),
-    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/wgg.root",     b_weight, "V#gamma+jets", "B"),
-    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/ttjets.root",  b_weight, "tt+0,1,2#gamma+jets", "B"),
-    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/ttgg.root",    b_weight, "tt+0,1,2#gamma+jets", "B"),
-    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/ttgjets.root", b_weight, "tt+0,1,2#gamma+jets", "B"),
-    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/dy.root", b_weight, "DY", "B"),
- // dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/qcd.root", b_weight, "QCD", "B"),
- // dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/data_2017_v2.root",    "1" + blind_cut, "Data 2017", "D"),
-    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v2_noSYS/data_2017_plusF.root", "1" + blind_cut, "Data 2017", "D"),
-  };
-
+  if( year == "2016" ){
+    lumi_weight = " * 35.91765";
+    b_weight = "mc_weight * TMath::Abs(mc_raw_weight) * weight" + lumi_weight + blind_cut;
+    variables.push_back( PlotVariable("weight_TMVA_2016_t5_sm_BDT_b2_0", "BDT score", 15, -1, 1.) );
+    string path = "/eos/user/p/pmandrik/HHWWgg_hzura/output_2016_v5_SYS/";
+    datasets = {
+      // signal
+      dataset(path + "/sm.root", "weight * reweight_factor_nlo_sm",  "SM HH",     "S"),
+      // bckgrounds
+      dataset(path+ "vh.root",  b_weight, "SM H", "B"),
+      dataset(path+ "vbf.root", b_weight, "SM H", "B"),
+      dataset(path+ "ttH.root", b_weight, "SM H", "B"),
+      dataset(path+ "ggh.root", b_weight, "SM H", "B"),
+      dataset(path+ "zgjets.root",  b_weight, "V#gamma+jets", "B"),
+      dataset(path+ "wgjets.root",  b_weight, "V#gamma+jets", "B"),
+      dataset(path+ "dy.root",      b_weight, "DY", "B"),
+      dataset(path+ "ggjets.root",  b_weight, "#gamma#gamma+jets", "B"),
+      dataset(path+ "gjets.root",   b_weight, "#gamma+jets",  "B"),
+   // dataset(path+ "wgg.root",     b_weight, "V#gamma+jets", "B"),
+      dataset(path+ "ttjets.root",  b_weight, "tt+0,1,2#gamma+jets", "B"),
+      dataset(path+ "ttgg.root",    b_weight, "tt+0,1,2#gamma+jets", "B"),
+      dataset(path+ "ttgjets.root", b_weight, "tt+0,1,2#gamma+jets", "B"),
+      // data
+      dataset(path+ "data_2016.root", "1" + blind_cut, "CMS 2016", "D"),
+    };
+  }
+  if( year == "2017" ){
+    lumi_weight = " * 41.05";
+    b_weight = "mc_weight * TMath::Abs(mc_raw_weight) * weight" + lumi_weight + blind_cut;
+    variables.push_back( PlotVariable("weight_TMVA_2017_t5_sm_BDT_b2_0", "BDT score", 15, -1, 1.) );
+    string path = "/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/";
+    datasets = {
+      // signal
+      dataset(path + "/sm.root", "weight * reweight_factor_nlo_sm",  "SM HH",     "S"),
+      // bckgrounds
+      dataset(path+ "vh.root",  b_weight, "SM H", "B"),
+      dataset(path+ "vbf.root", b_weight, "SM H", "B"),
+      dataset(path+ "ttH.root", b_weight, "SM H", "B"),
+      dataset(path+ "ggh.root", b_weight, "SM H", "B"),
+      dataset(path+ "zgjets.root",  b_weight, "V#gamma+jets", "B"),
+      dataset(path+ "wgjets.root",  b_weight, "V#gamma+jets", "B"),
+      dataset(path+ "dy.root",      b_weight, "DY", "B"),
+      dataset(path+ "ggjets.root",  b_weight, "#gamma#gamma+jets", "B"),
+      dataset(path+ "gjets.root",   b_weight, "#gamma+jets",  "B"),
+      dataset(path+ "wgg.root",     b_weight, "V#gamma+jets", "B"),
+      dataset(path+ "ttjets.root",  b_weight, "tt+0,1,2#gamma+jets", "B"),
+      dataset(path+ "ttgg.root",    b_weight, "tt+0,1,2#gamma+jets", "B"),
+      dataset(path+ "ttgjets.root", b_weight, "tt+0,1,2#gamma+jets", "B"),
+      // data
+      dataset(path+ "data_2017.root", "1" + blind_cut, "CMS 2016", "D"),
+    };
+  }
+  if( year == "2018" ){
+    lumi_weight = " * 54.4";
+    b_weight = "mc_weight * TMath::Abs(mc_raw_weight) * weight" + lumi_weight + blind_cut;
+    variables.push_back( PlotVariable("weight_TMVA_2018_t5_sm_BDT_b2_0", "BDT score", 15, -1, 1.) );
+    string path = "/eos/user/p/pmandrik/HHWWgg_hzura/output_2018_v5_SYS/";
+    datasets = {
+      // signal
+      dataset(path + "/sm.root", "weight * reweight_factor_nlo_sm",  "SM HH",     "S"),
+      // bckgrounds
+      dataset(path+ "vh.root",  b_weight, "SM H", "B"),
+      dataset(path+ "vbf.root", b_weight, "SM H", "B"),
+      dataset(path+ "ttH.root", b_weight, "SM H", "B"),
+      dataset(path+ "ggh.root", b_weight, "SM H", "B"),
+      dataset(path+ "zgjets.root",  b_weight, "V#gamma+jets", "B"),
+      dataset(path+ "wgjets.root",  b_weight, "V#gamma+jets", "B"),
+      dataset(path+ "dy.root",      b_weight, "DY", "B"),
+      dataset(path+ "ggjets.root",  b_weight, "#gamma#gamma+jets", "B"),
+      dataset(path+ "gjets.root",   b_weight, "#gamma+jets",  "B"),
+   // dataset(path+ "wgg.root",     b_weight, "V#gamma+jets", "B"),
+      dataset(path+ "ttjets.root",  b_weight, "tt+0,1,2#gamma+jets", "B"),
+      dataset(path+ "ttgg.root",    b_weight, "tt+0,1,2#gamma+jets", "B"),
+      dataset(path+ "ttgjets.root", b_weight, "tt+0,1,2#gamma+jets", "B"),
+      // data
+      dataset(path+ "data_2018.root", "1" + blind_cut, "CMS 2018", "D"),
+    };
+  }
 
   // make_correlation_plot(datasets, variables, "S", "S2017");
   // make_correlation_plot(datasets, variables, "B", "B2017");
-  process_datasets(datasets, variables, "vars2017");
-}
-
-void art_hist_maker_vs(){ // 2018-2017 comp
-  vector<dataset> datasets = {
- // dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2018_c0/hzura_2018_cHHH1_fsim_v0.root", "weight",  "SM 2018",     "S", "Def_Events"),
- // dataset("./output/chanels_split_2017/hzura_2017_all_fsim_v0.root", "weight * weight_nlo_SM / weight_initial_v0",  "SM 2017",     "S", "data"),
-    dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2018_c0/hzura_2018_cHHH1_fsim_v0.root", "weight",  "SM 2018",     "S", "Def_Events"),
-    dataset("./output/chanels_split_2017/hzura_2017_all_fsim_v0.root", "weight * weight_nlo_SM / weight_initial_v0",  "SM 2017",     "S", "data")
-  };
-
-  vector<PlotVariable> variables = {
-    PlotVariable("ljet1_tlv->Pt()", "ljet1_tlv->Pt()", 100, 0, 200),
-    PlotVariable("ljet2_tlv->Pt()", "ljet2_tlv->Pt()", 100, 0, 200),
-    
-    PlotVariable("ljet1_tlv->Eta()", "ljet1_tlv->Eta()", 100, -5, 5),
-    PlotVariable("ljet2_tlv->Eta()", "ljet2_tlv->Eta()", 100, -5, 5),
-  };
-  
-  process_datasets(datasets, variables);
+  process_datasets(datasets, variables, "vars" + year );
 }
 
 void art_hist_maker_2018(){ // 2018
@@ -371,7 +393,7 @@ void art_hist_maker_2017_reweighting(){ // 2018
     dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/cHHH1.root", "mc_weight * TMath::Abs(mc_raw_weight) * weight",  "SM NLO Powheg",     "S"),
     dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/sm.root", "mc_weight * TMath::Abs(mc_raw_weight) * weight",  "Initial SM LO Madgraph",     "S"),
   };
-  for(int j = 1; j < 13; j++){
+  for(int j = 1; j < 2; j++){
     if(j == 8) continue;
     string node_alt = to_string(j);
     datasets_sm.push_back( dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/" + node_alt + ".root",    
@@ -381,113 +403,24 @@ void art_hist_maker_2017_reweighting(){ // 2018
   }
   process_datasets(datasets_sm, variables, "reweight2017_sm_");
 
-  return;
-  for(int i = 1; i < 13; i++){
-    if(i == 8) continue;
-    string node = to_string(i);
+  vector<string> marks = { "cHHH0", "cHHH2", "cHHH5" };
+  for(string node  : marks){
     vector<dataset> datasets = {
-      dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/" + node + ".root",    "mc_weight * TMath::Abs(mc_raw_weight) * weight",  "EFT " + node + " LO MadGraph",    "S")
+      dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/" + node  + ".root",    "mc_weight * TMath::Abs(mc_raw_weight) * weight",  "EFT " + node + " NLO Powheg",    "S")
     };
 
-    for(int j = 1; j < 13; j++){
+    for(int j = 1; j < 2; j++){
       if(j == 8) continue;
-      if(i == j) continue;
       string node_alt = to_string(j);
-      datasets.push_back( dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/" + node_alt + ".root",    
+      datasets.push_back( dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_noSYS/" + node_alt + ".root",    
                                   "mc_weight * TMath::Abs(mc_raw_weight) * weight * reweight_factor_nlo_" + node, "EFT " + node_alt + " reweight to NLO EFT " + node,    "S") );
-      datasets.push_back( dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_SYS/" + node_alt + ".root",    
+      datasets.push_back( dataset("/eos/user/p/pmandrik/HHWWgg_hzura/output_2017_v5_noSYS/" + node_alt + ".root",    
                                   "mc_weight * TMath::Abs(mc_raw_weight) * weight * reweight_factor_lo_" + node,  "EFT " + node_alt + " reweight to LO EFT " + node,    "S") );
     }
 
     process_datasets(datasets, variables, "reweight2017_" + node + "_" );
   }
 }
-
-/*
-void make_tmva_hist(
-  string file_name, 
-  string tree_name, 
-  string weight_expressions,
-  TMVA::Reader * tmva_reader, 
-  TMVA::IMethod * tmva_method, 
-  vector<float*> & values_f,
-  TH1D * hist,
-  int max_events = -1
-){
-  cout << "make_tmva_hist() : " << endl;
-  cout << "  file : " << file_name << endl;
-  cout << "  tree : " << tree_name << endl;
-
-  TFile * file = TFile::Open(file_name.c_str());
-  TTree * tree = (TTree*) gDirectory->Get( tree_name.c_str() );
-
-  vector<TTreeFormula*> weights_f;
-  for(string weight_expression : weight_expressions)
-    weights_f.push_back( new TTreeFormula(weight_expression.c_str(), weight_expression.c_str(), tree) );
-
-  auto variables = get_variables_train();
-  vector<TTreeFormula*> values;
-  for(auto var : variables){
-    string vname = var.expression;
-    values.push_back( new TTreeFormula(vname.c_str(), vname.c_str(), tree) );
-  }
-
-  double tmva_value;
-  int nevents = tree->GetEntries();
-  int used_events = 0;
-  for(int i = 0; i < nevents; i++){
-    tree->GetEntry(i);
-
-    for(int j = 0; j < values_f.size(); j++) *(values_f[j]) = values.at(j)->EvalInstance();
-    tmva_value = tmva_method->GetMvaValue();
-
-    for(int j = 0; j < weights_f.size(); j++){
-      double r_weight = 1;
-
-      if(TMVA_TRANSFORMATION != nullptr) tmva_value = TMVA_TRANSFORMATION->GetScore( tmva_value );
-      
-      hist->Fill( tmva_value, weights_f.at(j)->EvalInstance() * r_weight );
-    }
-
-    used_events++;
-    if(max_events > 0 and i >= max_events) break;
-  }
-
-  if(max_events > 0){
-    cout << "  Scale : " << tree->GetEntries()/used_events << endl;
-    hist->Scale( tree->GetEntries()/used_events );
-  }
-
-  for(int i = 0; i < weight_expressions.size(); i++)
-    delete weights_f.at(i);
-
-  for(int i = 0; i < values.size(); i++)
-    delete values.at(i);
-
-  file->Close();
-}
-
-
-void art_tmva_hist_maker(string year = "2017"){
-  TMVA::Reader  * tmva_reader = new TMVA::Reader( "<options>" );
-  auto variables = get_variables_train();
-  vector<float*> values_f;
-  for(auto var : variables){
-    string vname = var.expression;
-    values_f.push_back( new float );
-    tmva_reader->AddVariable( vname.c_str(), (values_f.at( values_f.size() - 1 )) );
-  }
-  TMVA::IMethod * tmva_method = tmva_reader->BookMVA( tmva_name.c_str(), tmva_input.c_str() );
-
-    HistDrawer<TH1D> * drawer = new HistDrawer<TH1D>();
-    for(int j = 0; j < datasets.size(); j++){
-      dataset ds = datasets.at(j);
-      TH1D * hist = new TH1D( datasets.at(j).name, datasets.at(j).latex_name );
-      make_tmva_hist("", "Def_Events", "1", tmva_reader, tmva_method, values_f, hist );
-      drawer->AddProcess( hist, datasets.at(j).type, datasets.at(j).latex_name );
-    }
-    draw_hists_CMS( drawer, "output_test/tmva_out.png", "BDT score", "", "tmva" );
-}*/
 
 void make_model_hists_(string year, vector<string> files){
   TFile * fdata = TFile::Open( files[0].c_str() );
@@ -527,12 +460,11 @@ void make_model_hists_(string year, vector<string> files){
 }
 
 void make_model_hists(){
+  vector<string> files_2018 = { "/afs/cern.ch/user/p/pmandrik/public/temp/combo_cards/hists_2018_DATA_sm_123.root", "/afs/cern.ch/user/p/pmandrik/public/temp/combo_cards/hists_2018_all_123_123j_0.root" };
 
-  vector<string> files_2018 = {"/afs/cern.ch/user/p/pmandrik/public/temp/combo_cards/hists_2018_DATA_sm_123.root", "/afs/cern.ch/user/p/pmandrik/public/temp/combo_cards/hists_2018_all_123_123j_0.root"};
+  vector<string> files_2017 = { "/afs/cern.ch/user/p/pmandrik/public/temp/combo_cards/hists_2017_DATA_sm_120.root", "/afs/cern.ch/user/p/pmandrik/public/temp/combo_cards/hists_2017_all_120_120j_0.root" };
 
-  vector<string> files_2017 = {"/afs/cern.ch/user/p/pmandrik/public/temp/combo_cards/hists_2017_DATA_sm_120.root", "/afs/cern.ch/user/p/pmandrik/public/temp/combo_cards/hists_2017_all_120_120j_0.root"};
-
-  vector<string> files_2016 = {"/afs/cern.ch/user/p/pmandrik/public/temp/combo_cards/hists_2016_DATA_sm_117.root", "/afs/cern.ch/user/p/pmandrik/public/temp/combo_cards/hists_2016_all_117_117j_0.root"};
+  vector<string> files_2016 = { "/afs/cern.ch/user/p/pmandrik/public/temp/combo_cards/hists_2016_DATA_sm_117.root", "/afs/cern.ch/user/p/pmandrik/public/temp/combo_cards/hists_2016_all_117_117j_0.root" };
 
   make_model_hists_("2018", files_2018);
   make_model_hists_("2017", files_2017);
@@ -545,7 +477,13 @@ void art_hist_maker(){
   // art_tmva_hist_maker("2017");
   // art_hist_maker_2016_vs_2016NEW();
   // art_hist_maker_2016_reweighting();
-  art_hist_maker_2017_reweighting();
+  // art_hist_maker_2016_reweighting();
+  // art_hist_maker_2017_reweighting();
+  // art_hist_maker_2018_reweighting();
+
+  art_hist_maker("2016");
+  art_hist_maker("2017");
+  art_hist_maker("2018");
 }
 
 

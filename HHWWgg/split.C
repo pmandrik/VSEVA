@@ -135,7 +135,7 @@ void split(){
   vector<split_args *> all_args;
   string INPUT_PATH, OUTPUT_PATH;
 
-  int year = 2018;
+  int year = 2016;
   // 2016 == == ==
   if(year == 2016){
     OUTPUT_PATH = "./output/chanels_split_2016/";
