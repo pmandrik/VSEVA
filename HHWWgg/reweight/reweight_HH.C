@@ -4,7 +4,6 @@
 vector<double> get_CMS_EFT_benchmarks( string name, string year, bool cms_fake = false ){
   vector<double> answer;
   if( name == "SM" or name == "sm" ) answer = {1, 1, 0, 0, 0};
-  if( name == "box" or name == "BOX" ) answer = {0, 1, 0, 0, 0};
   if( name ==  "1" ) answer = {7.5, 1, -1, 0, 0};
   if( name ==  "2" ) answer = {1.0, 1.0, 0.5, -0.8, 0.6};
   if( name ==  "3" ) answer = {1.0, 1.0, -1.5, 0.0, -0.8};
@@ -30,6 +29,7 @@ vector<double> get_CMS_EFT_benchmarks( string name, string year, bool cms_fake =
     answer[1] = tr;
   }
 
+  if( name == "BOX" or name == "box" ) answer = {0, 1, 0, 0, 0};
   if( name ==  "cHHH0" ) answer = {0.0,  1.0, 0.0, 0.0, 0.0};
   if( name ==  "cHHH2" ) answer = {2.45, 1.0, 0.0, 0.0, 0.0};
   if( name ==  "cHHH5" ) answer = {5.0,  1.0, 0.0, 0.0, 0.0};
@@ -402,6 +402,67 @@ void make_reweighting_hists(){
   file->Close();
 }
 
+// create hists with the k-factors for CMS fake benchmarks ==============================================================================
+void make_reweighting_hists_from_fake(){
+  ReweightGudrin   rg = ReweightGudrin();
+  vector<string> bms = {"SM", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"};
+
+  TFile * file  = new TFile("reweight_HH_fake.root", "RECREATE");
+  TH1D  * hxsec_fake = new TH1D("xsections_fake", "xsections_fake", 3*bms.size()+10,  0, 3*bms.size()+10);
+  TH1D  * hxsec      = new TH1D("xsections", "xsections", 3*bms.size()+10,  0, 3*bms.size()+10);
+  vector<string> years = {"2016", "2017", "2018"};
+
+  double start_x = 240;
+  double end_x   = 1040;
+  double width   = 20;
+  int nbins   = int( (end_x-start_x)/width );
+
+  for(string year : years){
+    vector<TH1D*> start_points;
+    vector<TH1D*> end_points;
+    for(string bm : bms){
+      auto couplings_rg_fake = rg.GetEFTBenchmark(bm, year, true);
+      auto couplings_rg      = rg.GetEFTBenchmark(bm, year, false);
+
+      TH1D* h1 = new TH1D((year + "_"+bm +"_LO_fake").c_str(), (year + "_"+bm +"_LO_fake").c_str(), nbins,  start_x, end_x);
+      TH1D* h2 = new TH1D((year + "_"+bm +"_NLO").c_str(),     (year + "_"+bm +"_NLO").c_str(),     nbins,  start_x, end_x);
+      h1->SetOption("hist");
+      h2->SetOption("hist");
+
+      double dXsec;
+      for(int i = 0; i < nbins; i++){
+        double mass = start_x + width * i + width/2;
+        dXsec   = rg.GetDiffXsection( mass, couplings_rg_fake, "lo"  );
+        h1->Fill( start_x + 20 * i, dXsec );
+        dXsec   = rg.GetDiffXsection ( mass, couplings_rg, "nlo" );
+        h2->Fill( start_x + 20 * i, dXsec );
+      }
+
+      start_points.push_back( h1 );
+      end_points.push_back( h2 );
+      
+      hxsec_fake->Fill( (year + "_EFT_" + bm + "_LO_fake" ).c_str(), get_eft_xsec(bm, "lo" , year, true ) );
+      hxsec->Fill( (year + "_EFT_" + bm + "_NLO").c_str(), get_eft_xsec(bm, "nlo", year, false) );
+
+      cout << bm << " " << get_eft_xsec(bm, "lo" , year, true ) << " " << get_eft_xsec(bm, "nlo", year, false) << endl;
+    }
+
+    for(int i = 0; i < start_points.size(); i++){
+      for(int j = 0; j < end_points.size(); j++){
+        TH1D* in = start_points.at(i);
+        TH1D* fi = end_points.at(j);
+        string name = year + "_" + bms.at(j) + "_NLO_div_" + bms.at(i) + "_LO_fake" ;
+        TH1D* h3    = new TH1D(name.c_str(), name.c_str(), nbins, start_x, end_x);
+        h3->SetOption("hist");
+        h3->Add( fi );
+        h3->Divide( in );
+      }
+    }
+  }
+  file->Write();
+  file->Close();
+}
+
 // usage example ==============================================================================
 void reweight_example(){
   // preparation ... ==============================================================================
@@ -476,6 +537,7 @@ void reweight_example(){
 void reweight_HH(){
   // make_prediction_hists();
   make_reweighting_hists();
+  make_reweighting_hists_from_fake();
   // reweight_example();
 }
 
