@@ -1,5 +1,4 @@
 // P.Mandrik, IHEP, 2020
-
 // Return EFT benchmarks definition as https://arxiv.org/pdf/1710.08261.pdf
 vector<double> get_CMS_EFT_benchmarks( string name, string year, bool cms_fake = false ){
   vector<double> answer;
@@ -56,8 +55,61 @@ vector<string> get_benchmarks_names(){
   return benchmars;
 }
 
+// HH xsection using expression from https://arxiv.org/abs/1507.02245
+double get_eft_xsec_Carvalho(double kl, double kt, double c2, double cg, double c2g){
+  vector<double> A_values_lo  = { 2.09, 10.15, 0.28, 0.10, 1.33, -8.51, -1.37, 2.83, 1.46, -4.92, -0.68, 1.86, 0.32, -0.84, -0.57 };
+  vector<double> couplings = { pow(kt, 4), pow(c2, 2), pow(kt, 2)*pow(kl, 2), pow(cg, 2)*pow(kl, 2), pow(c2g, 2), c2*pow(kt, 2), kl*pow(kt, 3),
+                               kt*kl*c2, cg*kl*c2, c2g*c2, cg*kl*kt*kt, c2g*kt*kt,
+                               kl*cg*kt*kl, c2g*kt*kl, cg*c2g*kl };
+
+  double xsec_sm =  16.60711696;
+  double answer_xsection = 0;
+  for(int i = 0; i < A_values_lo.size(); i++)
+    answer_xsection += A_values_lo.at(i) * couplings.at(i);
+  return answer_xsection * xsec_sm;
+}
+
+// Custom HH xsection from Powheg 13 Tev generation results
+// TODO add links ... 
+double get_eft_xsec_13TeV(vector<double> kappas, string order){
+    double kl  = kappas[0];
+    double kt  = kappas[1];
+    double c2  = kappas[2];
+    double cg  = kappas[3];
+    double c2g = kappas[4];
+
+    vector<double> couplings = { 
+            // LO
+            pow(kt,4), pow(c2,2), pow(kt,2)*pow(kl,2), pow(cg,2)*pow(kl,2),
+            pow(c2g, 2), c2*pow(kt, 2), kl*pow(kt, 3), kt*kl*c2, cg*kl*c2, c2*c2g,
+            cg*kl*pow(kt, 2), c2g*pow(kt, 2), 
+            pow(kl,2)*cg*kt, c2g*kt*kl, cg*c2g*kl,
+            // NLO
+            pow(kt,3)*cg, kt*c2*cg, kt*pow(cg,2)*kl, cg*kt*c2g, 
+            pow(kt*cg,2), c2*pow(cg,2), pow(cg,3)*kl, pow(cg,2)*c2g };
+
+    vector<double> A_values_lo   = {35.0111,169.908,4.72866,2.38523,22.3288,-142.521,-22.996,47.2901,28.0101,-82.3576,-13.1345,31.2217,6.37158,-13.9821,-10.8268,};
+    vector<double> A_values_nlo  = {62.5088,345.604,9.63451,4.34841,39.0143,-268.644,-44.2924,96.5595,53.515,-155.793,-23.678,54.5601,12.2273,-26.8654,-19.3723,-0.0904439,0.321092,0.452381,-0.0190758,-0.607163,1.27408,0.364487,-0.499263,};
+
+    double answer_xsection = 0;
+    if( order == "lo" ){
+      for(int i = 0; i < A_values_lo.size(); i++)
+        answer_xsection += A_values_lo.at(i) * couplings.at(i);
+      return answer_xsection;
+    }
+
+    for(int i = 0; i < A_values_nlo.size(); i++)
+      answer_xsection += A_values_nlo.at(i) * couplings.at(i);
+    return answer_xsection;
+}
+
+double get_eft_xsec_13TeV(string mark, string order, string year = "2016", bool cms_fake=false){
+  vector<double> answer = get_CMS_EFT_benchmarks(mark, year, cms_fake);
+  return  get_eft_xsec_13TeV(answer, order);
+}
+
 // HH xsection using expression from https://arxiv.org/abs/1806.05162
-double get_eft_xsec(string mark, string order, string year = "2016", bool cms_fake=false){
+double get_eft_xsec_14TeV(string mark, string order, string year = "2016", bool cms_fake=false){
     vector<double> answer = get_CMS_EFT_benchmarks(mark, year, cms_fake);
     double ct  = answer[1];
     double ctt = answer[2];
@@ -74,7 +126,7 @@ double get_eft_xsec(string mark, string order, string year = "2016", bool cms_fa
                   pow(ct,3)*cg, ct*ctt*cg, ct*c3*pow(cg,2), cg*ct*cgg, 
                   pow(ct*cg,2), ctt*pow(cg,2), pow(cg,3)*c3, pow(cg,2)*cgg };
 
-    double sm_xsection_lo  = 16.60711696;
+    double sm_xsection_lo  = 19.85;
     double sm_xsection_nlo = 32.95;
     double answer_xsection = 0;
     
@@ -89,13 +141,15 @@ double get_eft_xsec(string mark, string order, string year = "2016", bool cms_fa
     return answer_xsection * sm_xsection_nlo;
 }
 
+
+
 // https://arxiv.org/abs/1806.05162 LO and NLO reweighting
-class ReweightGudrin {
+class ReweightGudrun {
   public:
   double bin_step;
   vector< vector<double>> A_values_lo, A_values_nlo;
 
-  ReweightGudrin(string input_lo="LO-Ais-13TeV.csv", string input_nlo="NLO-Ais-13TeV.csv", int bin_step=20){
+  ReweightGudrun(string input_lo="LO-Ais-13TeV.csv", string input_nlo="NLO-Ais-13TeV.csv", int bin_step=20){
     LoadData( input_lo, A_values_lo );;
     LoadData( input_nlo, A_values_nlo );
     this->bin_step = bin_step;
@@ -164,6 +218,32 @@ class ReweightGudrin {
     }
     return 0;
   }
+
+  double GetXsection(const vector<double> & eft_parameters, string order="nlo"){
+    double c3 , ct, ctt, cg, cgg;
+    c3 = eft_parameters[0];
+    ct = eft_parameters[1];
+    ctt = eft_parameters[2];
+    cg = eft_parameters[3];
+    cgg = eft_parameters[4];
+    vector<double> couplings = { pow(ct,4), pow(ctt,2), pow(c3 * ct,2), pow(c3*cg,2), pow(cgg,2), ctt*pow(ct,2), pow(ct,3)*c3,
+                  ct*c3*ctt, cg*c3*ctt, ctt*cgg, pow(ct,2)*cg*c3, pow(ct,2)*cgg, 
+                  ct*pow(c3,2)*cg, ct*c3*cgg, cg*c3*cgg, 
+                  pow(ct,3)*cg, ct*ctt*cg, ct*c3*pow(cg,2), cg*ct*cgg, 
+                  pow(ct*cg,2), ctt*pow(cg,2), pow(cg,3)*c3, pow(cg,2)*cgg };
+    
+    vector< vector<double> > * A_map = & A_values_nlo;
+    if(order=="lo") A_map = & A_values_lo;
+
+    double xsec = 0;
+    for(int i = 0; i < A_map->size(); i++){
+      vector<double> & values = A_map->at(i);
+      for( int j = 1; j < values.size(); j++ ){
+        xsec += values.at(j) * couplings.at(j-1);
+      }
+    }
+    return xsec * bin_step;
+  }
 };
 
 // https://arxiv.org/pdf/1710.08261.pdf LO reweighting
@@ -187,7 +267,9 @@ class ReweightCarvalho {
 	         1500.,   1750.,   2000.,  50000. };
     cos_theta_bins = { 0.,  0.40000001,  0.60000002,  0.80000001,  1. };
 
-    sm_xsection_lo  = 16.60711696;
+    // defined as xsection = sm_xsection * \sum A_i * f(i, kappas)
+    // assuming flat k-factors for all benchmarks : xsection_NNLO = sm_xsection_NNLO * \sum A_i * f(i, kappas)
+    sm_xsection_lo  = 16.60711696; 
   }
 
   void LoadData( string input_name, vector< vector<double>> & A_values, vector< vector<double>> & A_info ){
@@ -272,7 +354,7 @@ class ReweightCarvalho {
 
 // test functions ==============================================================================
 void make_prediction_hists(){
-  ReweightGudrin   rg = ReweightGudrin();
+  ReweightGudrun   rg = ReweightGudrun();
   ReweightCarvalho rc = ReweightCarvalho();
 
   vector<string> bms = {"SM", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"};
@@ -280,7 +362,7 @@ void make_prediction_hists(){
     auto couplings_rc = rc.GetEFTBenchmark(bm);
     auto couplings_rg = rg.GetEFTBenchmark(bm);
 
-    // Gudrin reweighting == >
+    // Gudrun reweighting == >
     double start_x = 240;
     double end_x   = 1040;
     double width   = 20;
@@ -292,7 +374,7 @@ void make_prediction_hists(){
     for(int i = 0; i < nbins; i++){
       double mass = start_x + width * i + width/2;
       dXsec   = rg.GetDiffXsection( mass, couplings_rg, "lo" );
-      cout << mass << " " << dXsec << endl;
+      // cout << mass << " " << dXsec << endl;
       h1->Fill( start_x + 20 * i, dXsec );
       dXsec  = rg.GetDiffXsection( mass, couplings_rg, "nlo" );
       h2->Fill( start_x + 20 * i, dXsec );
@@ -358,7 +440,7 @@ void make_prediction_hists(){
 
 // create hists with the k-factors ==============================================================================
 void make_reweighting_hists(){
-  ReweightGudrin   rg = ReweightGudrin();
+  ReweightGudrun  rg = ReweightGudrun();
   vector<string> bms = {"SM", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "box", 
                         "8a", "cHHH0", "cHHH2", "cHHH5",
                         "1b", "2b", "3b", "4b", "5b", "6b", "7b"};
@@ -370,7 +452,7 @@ void make_reweighting_hists(){
   for(string bm : bms){
     auto couplings_rg = rg.GetEFTBenchmark(bm);
 
-    // Gudrin reweighting == >
+    // gudrun reweighting == >
     double start_x = 240;
     double end_x   = 1040;
     double width   = 20;
@@ -394,9 +476,9 @@ void make_reweighting_hists(){
     h3->Add( h2 );
     h3->Divide( h1 );
 
-    cout << bm << " " << get_eft_xsec(bm, "lo") << " " << get_eft_xsec(bm, "nlo") << endl;
-    hxsec->Fill( ("EFT_"+bm +"_LO").c_str(),  get_eft_xsec(bm, "lo") );
-    hxsec->Fill( ("EFT_"+bm +"_NLO").c_str(), get_eft_xsec(bm, "nlo") );
+    cout << bm << " " << get_eft_xsec_13TeV(bm, "lo") << " " << get_eft_xsec_13TeV(bm, "nlo") << endl;
+    hxsec->Fill( ("EFT_"+bm +"_LO").c_str(),  get_eft_xsec_13TeV(bm, "lo") );
+    hxsec->Fill( ("EFT_"+bm +"_NLO").c_str(), get_eft_xsec_13TeV(bm, "nlo") );
   }
   file->Write();
   file->Close();
@@ -404,7 +486,7 @@ void make_reweighting_hists(){
 
 // create hists with the k-factors for CMS fake benchmarks ==============================================================================
 void make_reweighting_hists_from_fake(){
-  ReweightGudrin   rg = ReweightGudrin();
+  ReweightGudrun   rg = ReweightGudrun();
   vector<string> bms = {"SM", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"};
 
   TFile * file  = new TFile("reweight_HH_fake.root", "RECREATE");
@@ -441,10 +523,10 @@ void make_reweighting_hists_from_fake(){
       start_points.push_back( h1 );
       end_points.push_back( h2 );
       
-      hxsec_fake->Fill( (year + "_EFT_" + bm + "_LO_fake" ).c_str(), get_eft_xsec(bm, "lo" , year, true ) );
-      hxsec->Fill( (year + "_EFT_" + bm + "_NLO").c_str(), get_eft_xsec(bm, "nlo", year, false) );
+      hxsec_fake->Fill( (year + "_EFT_" + bm + "_LO_fake" ).c_str(), get_eft_xsec_13TeV(bm, "lo" , year, true ) );
+      hxsec->Fill( (year + "_EFT_" + bm + "_NLO").c_str(), get_eft_xsec_13TeV(bm, "nlo", year, false) );
 
-      cout << bm << " " << get_eft_xsec(bm, "lo" , year, true ) << " " << get_eft_xsec(bm, "nlo", year, false) << endl;
+      cout << bm << " " << get_eft_xsec_13TeV(bm, "lo" , year, true ) << " " << get_eft_xsec_13TeV(bm, "nlo", year, false) << endl;
     }
 
     for(int i = 0; i < start_points.size(); i++){
@@ -470,24 +552,24 @@ void reweight_example(){
   string initial_benchmark = "sm";
   vector<string> out_benchmars = {"sm", "box", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"};
 
-  // ReweightGudrin and ReweightCarvalho will provide 
-  ReweightGudrin   r_gudrin = ReweightGudrin("LO-Ais-13TeV.csv", "NLO-Ais-13TeV.csv");
+  // ReweightGudrun and ReweightCarvalho will provide 
+  ReweightGudrun   r_gudrun = ReweightGudrun("LO-Ais-13TeV.csv", "NLO-Ais-13TeV.csv");
   ReweightCarvalho r_carval = ReweightCarvalho("coefficientsByBin_extended_3M_costHHSim_59-4.txt");
 
   // Couplings values of the EFT benchmarks have different basis in Gudrin and Carvalho theoretical papers
   // obtain initial EFT points and total cross sections
-  vector<double> benchmark_coupling_gudrin_initial = r_gudrin.GetEFTBenchmark( initial_benchmark, year, true  ) ;
+  vector<double> benchmark_coupling_gudrun_initial = r_gudrun.GetEFTBenchmark( initial_benchmark, year, true  ) ;
   vector<double> benchmark_coupling_carval_initial = r_carval.GetEFTBenchmark( initial_benchmark, year, true  ) ;
-  double xsec_initial                = get_eft_xsec(initial_benchmark, "lo", year, true);
+  double xsec_initial                = get_eft_xsec_13TeV(initial_benchmark, "lo", year, true);
 
   // set final EFT points and total cross sections
-  vector< vector<double> > benchmark_couplings_gudrin_final, benchmark_couplings_carval_final;
+  vector< vector<double> > benchmark_couplings_gudrun_final, benchmark_couplings_carval_final;
   vector<double> xsecs_final_lo, xsecs_final_nlo;
   for(int i = 0; i < out_benchmars.size(); i++){
-    benchmark_couplings_gudrin_final.push_back   ( r_gudrin.GetEFTBenchmark( out_benchmars.at(i), year, false ) );
+    benchmark_couplings_gudrun_final.push_back   ( r_gudrun.GetEFTBenchmark( out_benchmars.at(i), year, false ) );
     benchmark_couplings_carval_final.push_back   ( r_carval.GetEFTBenchmark( out_benchmars.at(i), year, false ) );
-    xsecs_final_lo.push_back ( get_eft_xsec(out_benchmars.at(i), "lo", year, false) );
-    xsecs_final_nlo.push_back( get_eft_xsec(out_benchmars.at(i), "nlo", year, false) );
+    xsecs_final_lo.push_back ( get_eft_xsec_13TeV(out_benchmars.at(i), "lo", year, false) );
+    xsecs_final_nlo.push_back( get_eft_xsec_13TeV(out_benchmars.at(i), "nlo", year, false) );
   }
 
   // event loop ... ==============================================================================
@@ -498,19 +580,19 @@ void reweight_example(){
     double cos_H = 0.2;
 
     // initial differential crossections
-    double dXsection_gudrin_lo_initial  = r_gudrin.GetDiffXsection( m_HH, benchmark_coupling_gudrin_initial, "lo" );
+    double dXsection_gudrun_lo_initial  = r_gudrun.GetDiffXsection( m_HH, benchmark_coupling_gudrun_initial, "lo" );
     double dXsection_carval_lo_initial  = r_carval.GetDiffXsection( m_HH, cos_H, benchmark_coupling_carval_initial );
 
     // check if m_HH and cos_H within defined reweighting range, otherwise the dxsec is 0
-    if( dXsection_gudrin_lo_initial < 0.000001){
+    if( dXsection_gudrun_lo_initial < 0.000001){
       zero_weights_events += 1;
       continue;
     }
 
     // calculate the reweighting factor from initial EFT benchmark to every other
     for(int i = 0; i < out_benchmars.size(); i++){
-      double dXsection_gudrin_nlo_final = r_gudrin.GetDiffXsection( m_HH, benchmark_couplings_gudrin_final.at(i), "nlo" );
-      double dXsection_gudrin_lo_final  = r_gudrin.GetDiffXsection( m_HH, benchmark_couplings_gudrin_final.at(i), "lo" );
+      double dXsection_gudrun_nlo_final = r_gudrun.GetDiffXsection( m_HH, benchmark_couplings_gudrun_final.at(i), "nlo" );
+      double dXsection_gudrun_lo_final  = r_gudrun.GetDiffXsection( m_HH, benchmark_couplings_gudrun_final.at(i), "lo" );
       double dXsection_carval_lo_final  = r_carval.GetDiffXsection( m_HH, cos_H, benchmark_couplings_carval_final.at(i) );
 
       // if we have a set of N generated events the probability to obtain N_i events in the Mgg bin i is a DeltaM dXsec(Mgg_i) / Xsec 
@@ -519,12 +601,12 @@ void reweight_example(){
       // dXsec' and Xsec' and expected number of events N_i' = N DeltaM dXsec'(Mgg_i) / Xsec' (eq 2). 
       // From (eq 1) and (eq 2) N_i' = N_i (dXsec'(Mgg_i) / dXsec(Mgg_i)) (Xsec / Xsec'). Sum of the events in bin i is a N_i by definition. 
       // So, the sum of the events in bin i with weight w_i =(dXsec'(Mgg_i) / dXsec(Mgg_i)) (Xsec / Xsec') is the N_i'.
-      double weight_gudrin_nlo = dXsection_gudrin_nlo_final / dXsection_gudrin_lo_initial * xsec_initial / xsecs_final_nlo.at( i );
-      double weight_gudrin_lo  = dXsection_gudrin_lo_final  / dXsection_gudrin_lo_initial * xsec_initial / xsecs_final_lo.at( i );
+      double weight_gudrun_nlo = dXsection_gudrun_nlo_final / dXsection_gudrun_lo_initial * xsec_initial / xsecs_final_nlo.at( i );
+      double weight_gudrun_lo  = dXsection_gudrun_lo_final  / dXsection_gudrun_lo_initial * xsec_initial / xsecs_final_lo.at( i );
       double weight_carval_lo  = dXsection_carval_lo_final  / dXsection_carval_lo_initial * xsec_initial / xsecs_final_lo.at( i );
 
-      // cout << initial_benchmark << " -> " << out_benchmars.at(i) << " " << dXsection_gudrin_nlo_final << " " << dXsection_gudrin_lo_final << " " << dXsection_carval_lo_final << endl;
-      cout << N << " " << initial_benchmark << " -> " << out_benchmars.at(i) << " " << weight_gudrin_nlo << " " << weight_gudrin_lo << " " << weight_carval_lo << endl;
+      // cout << initial_benchmark << " -> " << out_benchmars.at(i) << " " << dXsection_gudrun_nlo_final << " " << dXsection_gudrun_lo_final << " " << dXsection_carval_lo_final << endl;
+      cout << N << " " << initial_benchmark << " -> " << out_benchmars.at(i) << " " << weight_gudrun_nlo << " " << weight_gudrun_lo << " " << weight_carval_lo << endl;
     }
   }
 
@@ -534,12 +616,52 @@ void reweight_example(){
   double extra_weight = total_events / (total_events - zero_weights_events);
 }
 
+// validation of the xsecs ==============================================================================
+#include "get_EFT_grid_points.C"
+void make_xsecs_validation(){
+  // reference xsections from Powheg 13 TeV
+  vector<double> xsecs_LO = {16.75, 86.31, 6.21, 443.58, 3815.01, 26.61, 11.04, 70.17, 60.33, 52.41, 246.25, 76.62, 1491.43, 213.36, 40.62, 149.19, 360.46, 183.15, 451.67, 230.91, 28.09, 124.02, 32.73, 85.39, 516.26, 282.86, 632.99, 356.15, 115.08, 36.70, 135.86, 48.59, 27.98, 178.89, 102.32, 33.61, 72.61, 53.77, 135.86, 40.98, 162.93, 28.26, 50.82, 76.18, 0, 0, 0, 0, 0, 0};
+  vector<double> xsecs_NLO = {27.863093217833576, 162.34559845377984, 11.85291826556827, 878.6187252093916, 7549.180890835765, 48.64120522963421, 20.83237541006396, 145.35134659502975, 129.81352406212272, 121.94791854865879, 490.81110611529976, 147.4954973856642, 3090.75808017093, 436.91966277055894, 93.99182504291637, 312.2855477838231, 686.1142808875294, 359.29975040999915, 854.2958230301776, 450.42213252002364, 63.93826048375961, 252.40544416086908, 67.16306892018427, 178.17356760336108, 997.2039271414974, 561.9159742113031, 1212.65828182493, 700.1650825293005, 249.45269386725693, 83.64561912545486, 281.1741511515414, 112.29545931515453, 61.47122089871927, 368.57225344995544, 210.2004795854609, 77.25016949594657, 164.0334727713831, 119.26514006254244, 280.56761261746203, 67.530835837366, 294.7078397059687, 52.01353896031721, 94.11995469419227, 129.34885971898277, 0, 0, 0, 0, 0, 0};
+
+  for(int i = 0; i <= 43; i++){
+    double kl, kt, c2, cg, c2g;
+    set_couplings(to_string(i), kl, kt, c2, cg, c2g);
+    vector<double> kappas = { kl, kt, c2, cg, c2g };
+    double xsec_an_lo  = get_eft_xsec_13TeV( kappas, "lo" );
+    double xsec_an_nlo = get_eft_xsec_13TeV( kappas, "nlo" );
+
+    double xsec_pw_lo  = xsecs_LO.at(i);
+    double xsec_pw_nlo = xsecs_NLO.at(i);
+
+    string bname = to_string(i);
+    if( i == 0 ) bname = "SM";
+    if( i > 12 ) bname = bname + "'";
+      
+    string kappas_str = "";
+      std::ostringstream out1;
+      out1 << std::fixed << std::setprecision(2) << kl;
+      std::ostringstream out2;
+      out2 << std::fixed << std::setprecision(2) << kt;
+      std::ostringstream out3;
+      out3 << std::fixed << std::setprecision(2) << c2;
+      std::ostringstream out4;
+      out4 << std::fixed << std::setprecision(2) << cg;
+      std::ostringstream out5;
+      out5 << std::fixed << std::setprecision(2) << c2g;
+      kappas_str = out1.str() + ", " + out2.str() + ", " + out3.str() + ", " + out4.str() + ", " + out5.str();
+    cout << bname << "|" << kappas_str << " | " << xsec_pw_lo << " " << xsec_an_lo << " | " << xsec_pw_nlo << " " << xsec_an_nlo << endl;
+  }
+}
+
 void reweight_HH(){
-  // make_prediction_hists();
+  make_xsecs_validation();
+  make_prediction_hists();
   make_reweighting_hists();
   make_reweighting_hists_from_fake();
   // reweight_example();
 }
+
+
 
 
 

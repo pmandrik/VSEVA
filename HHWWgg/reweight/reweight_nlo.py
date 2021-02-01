@@ -1,3 +1,5 @@
+# P.Mandrik, IHEP, 2020
+# WARNING!!! This script is outdated, please use the C++ version, stranger
 
 import ROOT
 from array import array
@@ -278,8 +280,9 @@ def make_prediction_hist(r, r_old, benchmark_title):
   return h0;
 
 if __name__ == "__main__" :
-  import sys
+  print "WARNING!!! This script is outdated, please use the C++ version, stranger"
 
+  import sys
   
   r1 = ReweightGudrin()
   r2 = ReweightCarvalho()
