@@ -54,6 +54,11 @@ def get_EFT_point( index=0, model="EWChL", Debug=False ):
       #print couplings, ","
       print answer[0], answer[1], answer[2], answer[3], answer[4], "Check xsec '", index, int(xsection)
 
+  if model == "FAKE" :
+    tr = answer[0];
+    answer[0] = answer[1];
+    answer[1] = tr;
+    answer[4] = 1.0
   if model == "EWChL":
     c3  = answer[0];
     ct  = answer[1];
@@ -62,6 +67,7 @@ def get_EFT_point( index=0, model="EWChL", Debug=False ):
     cgg = answer[4] * (-1.) / 3.  ; #/ pow(2.00524E-01 * 1000  / (19.85 * 12.2731), 0.5);
     answer = [ c3, ct, ctt, cg, cgg ];
   if model != "silent" : print answer[0], answer[1], answer[2], answer[3], answer[4]
+
   return answer[0], answer[1], answer[2], answer[3], answer[4]
 
 if __name__ == "__main__" :
