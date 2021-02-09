@@ -71,7 +71,7 @@ double get_eft_xsec_Carvalho(double kl, double kt, double c2, double cg, double 
 
 // Custom HH xsection from Powheg 13 Tev generation results
 // Validation https://indico.cern.ch/event/996681/contributions/4212133/
-double get_eft_xsec_13TeV(vector<double> kappas, string order){
+double get_eft_xsec_13TeV(vector<double> kappas, string order, string uncertantie=""){
     double kl  = kappas[0];
     double kt  = kappas[1];
     double c2  = kappas[2];
@@ -92,13 +92,56 @@ double get_eft_xsec_13TeV(vector<double> kappas, string order){
     vector<double> A_values_lo_mg = {27.7684,134.174,3.79328,1.35023,17.4785,-112.933,-18.3424,37.7066,19.5523,-65.5234,-9.08617,24.9774,4.31592,-11.2505,-7.59558,}; // pm_mg_LO-Ais-13TeV.txt
     vector<double> A_values_nlo  = {62.5088,345.604,9.63451,4.34841,39.0143,-268.644,-44.2924,96.5595,53.515,-155.793,-23.678,54.5601,12.2273,-26.8654,-19.3723,-0.0904439,0.321092,0.452381,-0.0190758,-0.607163,1.27408,0.364487,-0.499263,};
 
+    // TODO Under Development ============== ============== ============== START
+    if(uncertantie=="muR_UP"){ 
+      A_values_lo    = {35.0111,169.908,4.72866,2.38523,22.3288,-142.521,-22.996,47.2901,28.0101,-82.3576,-13.1345,31.2217,6.37158,-13.9821,-10.8268,};
+      A_values_nlo  = {};
+    }
+    if(uncertantie=="muR_DN"){ 
+      A_values_lo    = {35.0111,169.908,4.72866,2.38523,22.3288,-142.521,-22.996,47.2901,28.0101,-82.3576,-13.1345,31.2217,6.37158,-13.9821,-10.8268,};
+      A_values_nlo  = {};
+    }
+    if(uncertantie=="muF_UP"){ 
+      A_values_lo    = {35.0111,169.908,4.72866,2.38523,22.3288,-142.521,-22.996,47.2901,28.0101,-82.3576,-13.1345,31.2217,6.37158,-13.9821,-10.8268,};
+      A_values_nlo  = {};
+    }
+    if(uncertantie=="muF_DN"){ 
+      A_values_lo    = {35.0111,169.908,4.72866,2.38523,22.3288,-142.521,-22.996,47.2901,28.0101,-82.3576,-13.1345,31.2217,6.37158,-13.9821,-10.8268,};
+      A_values_nlo  = {};
+    }
+    if(uncertantie=="muRF_UP"){ 
+      A_values_lo    = {35.0111,169.908,4.72866,2.38523,22.3288,-142.521,-22.996,47.2901,28.0101,-82.3576,-13.1345,31.2217,6.37158,-13.9821,-10.8268,};
+      A_values_nlo  = {};
+    }
+    if(uncertantie=="muRF_DN"){ 
+      A_values_lo    = {35.0111,169.908,4.72866,2.38523,22.3288,-142.521,-22.996,47.2901,28.0101,-82.3576,-13.1345,31.2217,6.37158,-13.9821,-10.8268,};
+      A_values_nlo  = {};
+    }
+    if(uncertantie=="PDF4LHC15_nlo_30_pdfas_UP"){ 
+      A_values_lo    = {35.0111,169.908,4.72866,2.38523,22.3288,-142.521,-22.996,47.2901,28.0101,-82.3576,-13.1345,31.2217,6.37158,-13.9821,-10.8268,};
+      A_values_nlo  = {};
+    }
+    if(uncertantie=="PDF4LHC15_nlo_30_pdfas_DN"){ 
+      A_values_lo    = {35.0111,169.908,4.72866,2.38523,22.3288,-142.521,-22.996,47.2901,28.0101,-82.3576,-13.1345,31.2217,6.37158,-13.9821,-10.8268,};
+      A_values_nlo  = {};
+    }
+    if(uncertantie=="PDF4LHC15_nlo_30_pdfas_as_UP"){ 
+      A_values_lo    = {35.0111,169.908,4.72866,2.38523,22.3288,-142.521,-22.996,47.2901,28.0101,-82.3576,-13.1345,31.2217,6.37158,-13.9821,-10.8268,};
+      A_values_nlo  = {};
+    }
+    if(uncertantie=="PDF4LHC15_nlo_30_pdfas_as_DN"){ 
+      A_values_lo    = {35.0111,169.908,4.72866,2.38523,22.3288,-142.521,-22.996,47.2901,28.0101,-82.3576,-13.1345,31.2217,6.37158,-13.9821,-10.8268,};
+      A_values_nlo  = {};
+    }
+    // TODO Under Development ============== ============== ============== END
+
     double answer_xsection = 0;
     if( order == "lo" ){
       for(int i = 0; i < A_values_lo.size(); i++)
         answer_xsection += A_values_lo.at(i) * couplings.at(i);
       return answer_xsection;
     }
-    if( order == "lo_MadGraph" ){
+    if( order == "lo_MadGraph" ){ // pm_mg_LO-Ais-13TeV.txt
       for(int i = 0; i < A_values_lo_mg.size(); i++)
         answer_xsection += A_values_lo_mg.at(i) * couplings.at(i);
       return answer_xsection;
@@ -152,8 +195,9 @@ class ReweightMandrik {
   public:
   vector< vector<double>> A_values_lo, A_values_nlo;
 
-  ReweightMandrik(string input_lo="pm_pw_LO-Ais-13TeV.txt", string input_nlo="pm_pw_NLO-Ais-13TeV.txt"){
-    LoadData( input_lo, A_values_lo );
+  ReweightMandrik(string error_set="V0", string input_lo="pm_pw_LO-Ais-13TeV_V2.txt", string input_nlo="pm_pw_NLO-Ais-13TeV.txt"){
+    error_set = "\""+error_set+"\"";
+    LoadData( error_set, input_lo, A_values_lo );
     //LoadData( input_nlo, A_values_nlo ); TODO no NLO at the moment
   }
 
@@ -162,17 +206,27 @@ class ReweightMandrik {
     return couplings;
   }
 
-  void LoadData( string input_name, vector< vector<double>> & answer ){
+  void LoadData( string error_set, string input_name, vector< vector<double>> & answer ){
     std::string line;
     std::ifstream infile( input_name );
     while (std::getline(infile, line)) {
       std::istringstream iss(line);
-      answer.push_back( vector<double>() );
       string value;
+
+      if( error_set != "V0"){
+        std::getline(iss, value, ',');
+        if(value != error_set) continue;
+      }
+
+      answer.push_back( vector<double>() );
       while (std::getline(iss, value, ',')) {
         answer[ answer.size()-1 ].push_back( atof(value.c_str()) );
       }
+      if( error_set == "V0"){
+        for(int i = 0, N = answer[ answer.size()-1 ].size() + 1; i < N; i++) answer[ answer.size()-1 ].push_back( 0 );
+      }
     }
+    cout << answer.size() << endl;
   }
 
   vector< pair<double, double> > GetBinCenters(string order="nlo"){
@@ -189,6 +243,21 @@ class ReweightMandrik {
     return answer;
   }
 
+  double GetDiffXsection(double m_hh, double cos_theta, const vector<double> & couplings, const vector< vector<double> > * A_map){
+    for(int i = 0; i < A_map->size(); i++){
+      const vector<double> & values = A_map->at(i);
+      double mass_bin_end = values.at(1);
+      double cos_bin_end  = values.at(3);
+      if(m_hh > mass_bin_end or cos_theta > cos_bin_end) continue;
+      double dXsec = 0;
+      for( int j = 0; j < couplings.size(); j++ ){
+        dXsec += values.at(j+4) * couplings.at(j);
+      }
+      return dXsec;
+    }
+    return 0;
+  }
+
   double GetDiffXsection(double m_hh, double cos_theta, const vector<double> & eft_parameters, string order="nlo"){
     if(m_hh < 250) return 0;
     double kl, kt, c2, cg, c2g;
@@ -198,8 +267,13 @@ class ReweightMandrik {
     cg = eft_parameters[3];
     c2g = eft_parameters[4];
 
-    vector<double> couplings = { 
-      // LO
+    vector<double> couplings;
+    if(order == "lo") couplings = { // LO
+      pow(kt,4), pow(c2,2), pow(kt,2)*pow(kl,2), pow(cg,2)*pow(kl,2),
+      pow(c2g, 2), c2*pow(kt, 2), kl*pow(kt, 3), kt*kl*c2, cg*kl*c2, c2*c2g,
+      cg*kl*pow(kt, 2), c2g*pow(kt, 2), 
+      pow(kl,2)*cg*kt, c2g*kt*kl, cg*c2g*kl };
+    if(order == "nlo") couplings = { // LO
       pow(kt,4), pow(c2,2), pow(kt,2)*pow(kl,2), pow(cg,2)*pow(kl,2),
       pow(c2g, 2), c2*pow(kt, 2), kl*pow(kt, 3), kt*kl*c2, cg*kl*c2, c2*c2g,
       cg*kl*pow(kt, 2), c2g*pow(kt, 2), 
@@ -208,21 +282,10 @@ class ReweightMandrik {
       pow(kt,3)*cg, kt*c2*cg, kt*pow(cg,2)*kl, cg*kt*c2g, 
       pow(kt*cg,2), c2*pow(cg,2), pow(cg,3)*kl, pow(cg,2)*c2g };
     
-    vector< vector<double> > * A_map = & A_values_nlo;
-    if(order=="lo") A_map            = & A_values_lo;
+    vector< vector<double> > * A_map = & A_values_lo;
+    if(order=="nlo")           A_map = & A_values_nlo;
 
-    for(int i = 0; i < A_map->size(); i++){
-      vector<double> & values = A_map->at(i);
-      double mass_bin_end = values.at(1);
-      double cos_bin_end  = values.at(3);
-      if(m_hh > mass_bin_end or cos_theta > cos_bin_end) continue;
-      double dXsec = 0;
-      for( int j = 4; j < values.size(); j++ ){
-        dXsec += values.at(j) * couplings.at(j-4);
-      }
-      return dXsec;
-    }
-    return 0;
+    return GetDiffXsection(m_hh, cos_theta, couplings, A_map);
   }
 
 };
