@@ -30,6 +30,7 @@ vector<double> get_CMS_EFT_benchmarks( string name, string year, bool cms_fake =
 
   if( name == "BOX" or name == "box" ) answer = {0, 1, 0, 0, 0};
   if( name ==  "cHHH0" ) answer = {0.0,  1.0, 0.0, 0.0, 0.0};
+  if( name ==  "cHHH1" ) answer = {1.0,  1.0, 0.0, 0.0, 0.0};
   if( name ==  "cHHH2" ) answer = {2.45, 1.0, 0.0, 0.0, 0.0};
   if( name ==  "cHHH5" ) answer = {5.0,  1.0, 0.0, 0.0, 0.0};
   
@@ -195,10 +196,10 @@ class ReweightMandrik {
   public:
   vector< vector<double>> A_values_lo, A_values_nlo;
 
-  ReweightMandrik(string error_set="V0", string input_lo="pm_pw_LO-Ais-13TeV_V2.txt", string input_nlo="pm_pw_NLO-Ais-13TeV.txt"){
+  ReweightMandrik(string error_set="V0", string input_lo="pm_pw_LO-Ais-13TeV_V2.txt", string input_nlo="pm_pw_NLO_Ais_13TeV_V2.txt"){
     error_set = "\""+error_set+"\"";
     LoadData( error_set, input_lo, A_values_lo );
-    //LoadData( input_nlo, A_values_nlo ); TODO no NLO at the moment
+    LoadData( error_set, input_nlo, A_values_nlo );
   }
 
   vector<double> GetEFTBenchmark(string name, string year="2016", bool cms_fake = false){
@@ -213,7 +214,7 @@ class ReweightMandrik {
       std::istringstream iss(line);
       string value;
 
-      if( error_set != "V0"){
+      if( error_set != "\"V0\""){
         std::getline(iss, value, ',');
         if(value != error_set) continue;
       }
@@ -222,7 +223,7 @@ class ReweightMandrik {
       while (std::getline(iss, value, ',')) {
         answer[ answer.size()-1 ].push_back( atof(value.c_str()) );
       }
-      if( error_set == "V0"){
+      if( error_set == "\"V0\""){
         for(int i = 0, N = answer[ answer.size()-1 ].size() + 1; i < N; i++) answer[ answer.size()-1 ].push_back( 0 );
       }
     }
@@ -632,7 +633,7 @@ void make_reweighting_hists(){
 }
 
 // create hists with the k-factors for CMS fake benchmarks ==============================================================================
-// OLD VERSION --- PLEASU USE make_reweighting_hists_from_fake_v2()
+// OLD VERSION --- PLEASU USE make_reweighting_hists_from_fake_v3()
 void make_reweighting_hists_from_fake(){ 
   ReweightGudrun   rg = ReweightGudrun();
   vector<string> bms = {"SM", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"};
@@ -779,6 +780,116 @@ void make_reweighting_hists_from_fake_v2(){
   file->Close();
 }
 
+void make_reweighting_hists_from_fake_v3(){
+  ReweightGudrun  rg = ReweightGudrun();
+  ReweightMandrik rm_mg     = ReweightMandrik("V0", "pm_mg_LO-Ais-13TeV.txt");
+  ReweightMandrik rm_pw     = ReweightMandrik("V0", "pm_pw_LO-Ais-13TeV.txt");
+  ReweightMandrik rm_pw_NLO = ReweightMandrik("", "pm_pw_LO-Ais-13TeV_V2.txt", "pm_pw_NLO_Ais_13TeV_V2.txt");
+  vector<string> bms = {"SM", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "cHHH0", "cHHH1", "cHHH2", "cHHH5", "1b", "2b", "3b", "4b", "5b", "6b", "7b"};
+
+  TFile * file       = new TFile("reweight_HH_fake_v3.root", "RECREATE");
+
+  TH1D  * hxsec_2 = new TH1D("xsections_MadGraph_LO", "xsections_MadGraph_LO", 3*bms.size()+10,  0, 3*bms.size()+10);
+  TH1D  * hxsec_3 = new TH1D("xsections_Powheg_LO",  "xsections_Powheg_LO",  3*bms.size()+10,  0, 3*bms.size()+10);
+  TH1D  * hxsec_4 = new TH1D("xsections_Powheg_NLO", "xsections_Powheg_NLO", 3*bms.size()+10,  0, 3*bms.size()+10);
+
+      hxsec_2->GetYaxis()->SetTitle("#sigma [fb]");
+      hxsec_3->GetYaxis()->SetTitle("#sigma [fb]");
+      hxsec_4->GetYaxis()->SetTitle("#sigma [fb]");
+
+  vector<string> years = {"2016", "2017", "2018"};
+
+  const Int_t NBINS = 29;
+  Double_t edges[NBINS + 1] = {250.,    270.,    290.,    310., 330.,    350.,    370.,    390.,    410.,    430.,    450., 470.,    490.,    510.,    530.,    550.,    570.,    590., 640.,    680.,    720.,    760.,    800.,    900.,   1000., 1200.,  1400.,    1800.,   2500.,   5000.};
+
+  const Int_t COS_NBINS = 5;
+  Double_t cos_edges[COS_NBINS + 1] = { 0.,  0.4000000,  0.6000000,  0.8000000,  1. };
+  
+  for(string year : years){
+    TH1D  * hxsec_fake = new TH1D( (year+"_xsections_MadGraph_LO_fake").c_str(), (year+"_xsections_MadGraph_LO_fake").c_str(), 3*bms.size()+10,  0, 3*bms.size()+10);
+    hxsec_fake->GetYaxis()->SetTitle("#sigma [fb]");
+    for(string bm : bms){
+      auto couplings_rm_fake = rm_mg.GetEFTBenchmark(bm, year, true);
+      TH1D* h1 = new TH1D((year + "_"+bm +"_MadGraph_LO_fake").c_str(), (year + "_"+bm +"_MadGraph_LO_fake").c_str(), NBINS,  edges);
+      h1->SetOption("hist");
+      h1->GetYaxis()->SetTitle("d #sigma /dmHH [fb/GeV]");
+
+      double dXsec;
+      double start_x = edges[0], end_x = edges[NBINS];
+      double step = 1;
+      for(double mass = 0; mass < (end_x-start_x)/step; mass+=step){
+        // cout << year << " " << bm << " " << mass << endl;
+        dXsec   = rm_mg.GetDiffXsection( mass, 0.5, couplings_rm_fake, "lo"  );
+        h1->Fill( mass, dXsec*step );
+      }
+      for(int i = 1; i <= NBINS; i++ ){
+        h1->SetBinContent( i, double(h1->GetBinContent(i)) /h1->GetBinWidth(i) );
+      }
+
+      hxsec_fake->Fill( (year + "_EFT_" + bm + "_MadGraph_LO_fake" ).c_str(), get_eft_xsec_13TeV(bm, "lo_MadGraph" , year, true  ) );
+    }
+  }
+
+    string year = "2017";
+    for(string bm : bms){
+      auto couplings_rm      = rm_mg.GetEFTBenchmark(bm, year, false);
+      auto couplings_rg      = rg.GetEFTBenchmark(bm, year, false);
+
+      TH1D* h2 = new TH1D((bm +"_MadGraph_LO").c_str(),      (bm +"_MadGraph_LO").c_str(),      NBINS,  edges);
+      TH1D* h3 = new TH1D((bm +"_Powheg_LO").c_str(),        (bm +"_Powheg_LO").c_str(),        NBINS,  edges);
+      TH1D* h4 = new TH1D((bm +"_Powheg_NLO").c_str(),       (bm +"_Powheg_NLO").c_str(),       NBINS,  edges);
+      TH1D* h5 = new TH1D((bm +"_Powheg_NLO_V2").c_str(),    (bm +"_Powheg_NLO_V2").c_str(),    NBINS,  edges);
+      h2->SetOption("hist");
+      h3->SetOption("hist");
+      h4->SetOption("hist");
+      h5->SetOption("hist");
+
+      h2->GetYaxis()->SetTitle("d #sigma /dmHH [fb/GeV]");
+      h3->GetYaxis()->SetTitle("d #sigma /dmHH [fb/GeV]");
+      h4->GetYaxis()->SetTitle("d #sigma /dmHH [fb/GeV]");
+      h5->GetYaxis()->SetTitle("d #sigma /dmHH [fb/GeV]");
+
+      double dXsec;
+      double start_x = edges[0], end_x = edges[NBINS];
+      double step = 1;
+      for(double mass = 0; mass < (end_x-start_x)/step; mass+=step){
+        dXsec   = rm_mg.GetDiffXsection( mass, 0.5, couplings_rm, "lo"  );
+        h2->Fill( mass, dXsec*step );
+
+        dXsec   = rm_pw.GetDiffXsection( mass, 0.5, couplings_rm, "lo"  );
+        h3->Fill( mass, dXsec*step );
+
+        dXsec   = rg.GetDiffXsection( mass, couplings_rg, "nlo" );
+        h4->Fill( mass, dXsec*step );
+
+        dXsec = 0;
+        for(int i = 0; i < COS_NBINS-1; i++){
+          double cos_max = cos_edges[i + 1];
+          double cos_min = cos_edges[i];
+          double dcos = cos_max - cos_min;
+          dXsec += rm_pw_NLO.GetDiffXsection(mass, (cos_max+cos_min)/2., couplings_rm, "nlo") * dcos;
+        }
+        h5->Fill( mass, dXsec*step );
+      }
+
+      for(int i = 1; i <= NBINS; i++ ){
+        h2->SetBinContent( i, double(h2->GetBinContent(i)) /h2->GetBinWidth(i) );
+        h3->SetBinContent( i, double(h3->GetBinContent(i)) /h3->GetBinWidth(i) );
+        h4->SetBinContent( i, double(h4->GetBinContent(i)) /h4->GetBinWidth(i) );
+        h5->SetBinContent( i, double(h5->GetBinContent(i)/1000. ) /h5->GetBinWidth(i) );
+      }
+
+      hxsec_2->Fill( ("EFT_" + bm + "_MadGraph_LO" ).c_str(),      get_eft_xsec_13TeV(bm, "lo_MadGraph" , year, false ) );
+      hxsec_3->Fill( ("EFT_" + bm + "_Powheg_LO").c_str(),         get_eft_xsec_13TeV(bm, "lo",  year, false) );
+      hxsec_4->Fill( ("EFT_" + bm + "_Powheg_NLO").c_str(),        get_eft_xsec_13TeV(bm, "nlo", year, false) );
+
+      cout << bm << " " << get_eft_xsec_13TeV(bm, "lo_MadGraph" , year, true ) << " -> " << get_eft_xsec_13TeV(bm, "lo_MadGraph" , year, false );
+      cout << " -> "    << get_eft_xsec_13TeV(bm, "lo",  year, false)          << " -> " << get_eft_xsec_13TeV(bm, "nlo", year, false) << endl;
+    }
+  file->Write();
+  file->Close();
+}
+
 // usage example ==============================================================================
 void reweight_example(){
   // preparation ... ==============================================================================
@@ -892,7 +1003,8 @@ void reweight_HH(){
   // make_prediction_hists();
   // make_reweighting_hists();
   // make_reweighting_hists_from_fake();
-  make_reweighting_hists_from_fake_v2();
+  // make_reweighting_hists_from_fake_v2();
+  make_reweighting_hists_from_fake_v3();
   // reweight_example();
 }
 
