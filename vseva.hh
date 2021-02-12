@@ -322,6 +322,7 @@ namespace vseva {
       HistDrawer(){
         font = 132;
         logY = false;
+        logX = false;
         label_x = "X";
         label_y = "Events";
         xmin = 0; xmax = 0; 
@@ -330,15 +331,16 @@ namespace vseva {
         corr_draw_option = "SCAT";
         maxh_v_scale_factor = 1.75;
         draw_residual = true;
+        scale_signals = true;
       }
 
       vector<TMP_hist_type*> signals, backgrounds, datas;
       int font;
-      bool logY;
+      bool logY, logX;
       string label_x, label_y, corr_draw_option;
       double xmin, xmax, ymin, ymax;
       double signal_scale, maxh_v_scale_factor;
-      bool draw_residual;
+      bool draw_residual, scale_signals;
 
       void Print(){
         cout << "mRoot::HistDrawer.Print() " << endl;
@@ -468,16 +470,6 @@ namespace vseva {
         hs->SetMaximum( maxh_v );
       }
 
-      void DrawHists(){
-        SetMaximum();
-             if(backgrounds.size())  backgrounds.at(0)->Draw("hist");
-        else if( signals.size()   )      signals.at(0)->Draw("hist");
-        else if( datas.size()     )        datas.at(0)->Draw("hist");
-        for(auto hist : backgrounds) hist->Draw("same hist");
-        for(auto hist : signals)     hist->Draw("same hist");
-        for(auto hist : datas)       hist->Draw("same E1");
-      }
-
       THStack * GetStack(){
         THStack * hs = new THStack();
         vector <TMP_hist_type*> backgrounds_sorted = backgrounds;
@@ -529,15 +521,18 @@ namespace vseva {
         }
         //for(auto hist : backgrounds)
         //  hist->Scale(1./sum_integral);
-        for(auto hist : signals)
-          hist->Scale( 0.50*sum_integral / hist->Integral() );
+
+        if(scale_signals){
+          for(auto hist : signals)
+            hist->Scale( 0.50*sum_integral / hist->Integral() );
+        }
 
         SetMaximumStack( hs );
         if( backgrounds.size() ) hs->Draw("hist");
         else {
           cout << "DrawHistsTMVA(): no backgrounds ... " << backgrounds.size() << endl; 
           if( signals.size()   )      signals.at(0)->Draw("hist");
-          else if( datas.size()     )   datas.at(0)->Draw("hist");
+          else if( datas.size()     )   datas.at(0)->Draw("E1");
           else return;
         }
 
@@ -571,7 +566,6 @@ namespace vseva {
           pad_res->SetBottomMargin(0.50); 
           pad_res->SetTopMargin(0.03); 
           pad_res->cd();
-          
           TMP_hist_type total_backgrounds( *(backgrounds.at(0)) );
           total_backgrounds.Sumw2();
           for(int i = 1; i < backgrounds.size(); i++) total_backgrounds.Add( backgrounds.at(i) );
@@ -602,8 +596,8 @@ namespace vseva {
             rhist->GetXaxis()->SetTitleOffset(1.5);
             rhist->GetXaxis()->SetTitleSize(0.12);
             rhist->SetStats(false);
-          }
-          for(int i = 0; i < 3; i++){
+          } 
+          /*for(int i = 0; i < 3; i++){
             vector<double> vals = {rmin*0.75, 0, rmax*0.75};
             double y_val = vals.at( i );
             auto l = new TLine( total_backgrounds.GetXaxis()->GetXmin(), y_val, total_backgrounds.GetXaxis()->GetXmax(), y_val );
@@ -611,7 +605,7 @@ namespace vseva {
             l->SetLineWidth( 2 );
             l->SetLineStyle( 7 );
             l->Draw();
-          }
+          }*/ 
           for(int i = 0; i < datas.size(); i++){
             TMP_hist_type * data = datas.at( i );
             TMP_hist_type * rhist = new TMP_hist_type( *data );
@@ -651,6 +645,88 @@ namespace vseva {
 
           for(auto hist : signals) hist->Draw("same hist");
           for(auto hist : datas)   hist->Draw("same E1");
+        }
+      }
+
+      void DrawHists(TCanvas * canv = nullptr){
+        SetMaximum();
+        // Residual =-=-=-=-=-= =-=-=-=-=-= =-=-=-=-=-=
+        if( canv and draw_residual and datas.size() and (backgrounds.size() + signals.size())){
+          double residial_height = 0.33;
+          canv->cd();
+          TPad *pad_main = new TPad("p1","p1", 0.1, residial_height, 1.0, 1.0);
+          cout << "MARGING!!!" << pad_main->GetLeftMargin() << " " << pad_main->GetRightMargin() << endl;
+          pad_main->SetRightMargin(0.); 
+          cout << "MARGING!!!" << pad_main->GetLeftMargin() << " " << pad_main->GetRightMargin() << endl;
+          pad_main->Draw();
+          pad_main->cd();
+          if( datas.size()     )        datas.at(0)->Draw("E1");
+          else if( backgrounds.size() ) backgrounds.at(0)->Draw("hist");
+          else if( signals.size()   )   signals.at(0)->Draw("hist");
+          else return;
+          for(auto hist : datas)       hist->Draw("same E1");
+          for(auto hist : signals)     hist->Draw("same hist");
+          for(auto hist : backgrounds) hist->Draw("same hist");
+
+
+          //pad_main->SetBottomMargin(0.1); 
+          //pad_main->SetTopMargin(0.1); 
+          pad_main->Print();
+          pad_main->Modified();
+
+          canv->cd(0);
+          TPad *pad_res = new TPad("p3","p3", 0.0, 0.0, 1.0, residial_height);
+          pad_res->Draw();
+          pad_res->cd();
+
+          double rmin, rmax;
+          for(int i = 0; i < backgrounds.size(); i++){
+            TMP_hist_type * back = backgrounds.at(i);
+            for(int j = 0; j < 1; j++){
+              TMP_hist_type * data = datas.at( j );
+              TMP_hist_type * rhist = new TMP_hist_type( *data );
+              rhist->Sumw2();
+              rhist->Add( back, -1.);
+              if(not i) rhist->Draw("p0e1");
+              else      rhist->Draw("p0e1 same");
+              cout << "!!!" << endl;
+
+              rmin = rhist->GetMinimum();
+              rmax = rhist->GetMaximum();
+
+              rhist->GetYaxis()->SetTitle( "ratio" );
+              rhist->GetYaxis()->SetLabelFont(132);
+              rhist->GetYaxis()->SetLabelOffset(0.02);
+              rhist->GetYaxis()->SetLabelSize(0.05);
+              rhist->GetYaxis()->SetTitleFont(132);
+              rhist->GetYaxis()->SetTitleOffset(1.25);
+              rhist->GetYaxis()->SetTitleSize(0.08);
+
+              rhist->GetXaxis()->SetTitle( label_x.c_str() );
+              rhist->GetXaxis()->SetLabelFont(132);
+              rhist->GetXaxis()->SetLabelOffset(0.08);
+              rhist->GetXaxis()->SetLabelSize(0.08);
+              rhist->GetXaxis()->SetTitleFont(132);
+              rhist->GetXaxis()->SetTitleOffset(1.5);
+              rhist->GetXaxis()->SetTitleSize(0.12);
+              rhist->SetStats(false);
+            }
+          }
+          //pad_res->SetLeftMargin(0.2); 
+          //pad_res->SetRightMargin(0.2); 
+          //pad_res->SetBottomMargin(0.2); 
+          //pad_res->SetTopMargin(0.02); 
+
+          pad_main->cd();
+        } else {
+          SetMaximum();
+          if( datas.size()     )        datas.at(0)->Draw("E1");
+          else if( backgrounds.size() ) backgrounds.at(0)->Draw("hist");
+          else if( signals.size()   )   signals.at(0)->Draw("hist");
+          else return;
+          for(auto hist : datas)       hist->Draw("same E1");
+          for(auto hist : signals)     hist->Draw("same hist");
+          for(auto hist : backgrounds) hist->Draw("same hist");
         }
       }
 
@@ -717,17 +793,17 @@ namespace vseva {
       }
 
       TLegend * GetLegend(float x1=0.55, float y1=0.65, float x2=0.875, float y2=0.88){
-        cout << 1 << endl; TLegend * legend = new TLegend(x1,y1,x2,y2);
+        TLegend * legend = new TLegend(x1,y1,x2,y2);
         // cout << 1 << endl; legend->SetFillColor(0); not worked with CMSSW 10_2_13
-        cout << 3 << endl; legend->SetFillStyle(3001);
+        legend->SetFillStyle(3001);
         // cout << 4 << endl; legend->SetLineColor(0); not worked with CMSSW 10_2_13
-        cout << 5 << endl; legend->SetTextFont(font) ;
+         legend->SetTextFont(font) ;
         for(auto hist : datas)
           legend->AddEntry(hist, hist->GetTitle(), "p");
         for(auto hist : signals)
           legend->AddEntry(hist, hist->GetTitle(), "l");
         for(auto hist : backgrounds)
-          legend->AddEntry(hist, hist->GetTitle(), "f");
+          legend->AddEntry(hist, hist->GetTitle(), "l");
         return legend;
       }
 
@@ -776,6 +852,7 @@ namespace vseva {
         gStyle->SetTextFont(font);
         gStyle->SetOptTitle(0);
         if(logY) canvas->SetLogy();
+        if(logX) canvas->SetLogx();
         canvas->SetLeftMargin(0.14); 
         canvas->SetRightMargin(0.08); 
         canvas->SetBottomMargin(0.20); 
