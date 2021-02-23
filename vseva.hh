@@ -332,6 +332,7 @@ namespace vseva {
         maxh_v_scale_factor = 1.75;
         draw_residual = true;
         scale_signals = true;
+        force_set_min = true;
       }
 
       vector<TMP_hist_type*> signals, backgrounds, datas;
@@ -340,7 +341,7 @@ namespace vseva {
       string label_x, label_y, corr_draw_option;
       double xmin, xmax, ymin, ymax;
       double signal_scale, maxh_v_scale_factor;
-      bool draw_residual, scale_signals;
+      bool draw_residual, scale_signals, force_set_min;
 
       void Print(){
         cout << "mRoot::HistDrawer.Print() " << endl;
@@ -419,15 +420,15 @@ namespace vseva {
       void SetMinMax(double minh_v, double maxh_v){
         for(auto hist : signals     ){ 
           hist->SetMaximum( maxh_v );
-          hist->SetMinimum( minh_v );
+          if(force_set_min) hist->SetMinimum( minh_v );
         }
         for(auto hist : backgrounds ) {
           hist->SetMaximum( maxh_v );
-          hist->SetMinimum( minh_v );
+          if(force_set_min) hist->SetMinimum( minh_v );
         }
         for(auto hist : datas ) {
           hist->SetMaximum( maxh_v );
-          hist->SetMinimum( minh_v );
+          if(force_set_min) hist->SetMinimum( minh_v );
         }
       }
 
@@ -466,7 +467,7 @@ namespace vseva {
         }
         SetMinMax(minh_v, maxh_v);
         if( not backgrounds.size() ) return;
-        hs->SetMinimum( minh_v );
+        if(force_set_min) hs->SetMinimum( minh_v );
         hs->SetMaximum( maxh_v );
       }
 
@@ -794,9 +795,7 @@ namespace vseva {
 
       TLegend * GetLegend(float x1=0.55, float y1=0.65, float x2=0.875, float y2=0.88){
         TLegend * legend = new TLegend(x1,y1,x2,y2);
-        // cout << 1 << endl; legend->SetFillColor(0); not worked with CMSSW 10_2_13
         legend->SetFillStyle(3001);
-        // cout << 4 << endl; legend->SetLineColor(0); not worked with CMSSW 10_2_13
          legend->SetTextFont(font) ;
         for(auto hist : datas)
           legend->AddEntry(hist, hist->GetTitle(), "p");

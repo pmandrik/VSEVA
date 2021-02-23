@@ -163,7 +163,7 @@ class ReweightMandrik {
   public:
   vector< vector<double>> A_values_lo, A_values_nlo;
 
-  ReweightMandrik(string error_set="V0", string input_lo="pm_pw_LO-Ais-13TeV_V2.txt", string input_nlo="pm_pw_NLO_Ais_13TeV_V2.txt"){
+  ReweightMandrik(string error_set="", string input_lo="pm_pw_LO-Ais-13TeV_V2.txt", string input_nlo="pm_pw_NLO_Ais_13TeV_V2.txt"){
     error_set = "\""+error_set+"\"";
     LoadData( error_set, input_lo, A_values_lo );
     LoadData( error_set, input_nlo, A_values_nlo );
@@ -254,6 +254,20 @@ class ReweightMandrik {
     if(order=="nlo")           A_map = & A_values_nlo;
 
     return GetDiffXsection(m_hh, cos_theta, couplings, A_map);
+  }
+
+  double GetA(int index, double m_hh, double cos_theta, string order="nlo"){
+    vector< vector<double> > * A_map = & A_values_lo;
+    if(order=="nlo")           A_map = & A_values_nlo;
+    
+    for(int i = 0; i < A_map->size(); i++){
+      const vector<double> & values = A_map->at(i);
+      double mass_bin_end = values.at(1);
+      double cos_bin_end  = values.at(3);
+      if(m_hh > mass_bin_end or cos_theta > cos_bin_end) continue;
+      return values.at(index+4);
+    }
+    return 0;
   }
 
 };
@@ -358,6 +372,19 @@ class ReweightGudrun {
       }
     }
     return xsec * bin_step;
+  }
+
+  double GetA(int index, double m_hh, string order="nlo"){
+    vector< vector<double> > * A_map = & A_values_lo;
+    if(order=="nlo")           A_map = & A_values_nlo;
+    
+    for(int i = 0; i < A_map->size(); i++){
+      vector<double> & values = A_map->at(i);
+      double mass = values.at(0) + bin_step/2;
+      if(m_hh > mass) continue;
+      return values.at(index+1);
+    }
+    return 0;
   }
 };
 
