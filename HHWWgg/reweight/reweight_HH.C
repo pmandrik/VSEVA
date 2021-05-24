@@ -1,5 +1,5 @@
 // P.Mandrik, IHEP, 2020
-// Return EFT benchmarks definition as https://arxiv.org/pdf/1710.08261.pdf
+// Return EFT benchmarks definition as https://link.springer.com/article/10.1007/JHEP04(2016)126
 vector<double> get_CMS_EFT_benchmarks( string name, string year, bool cms_fake = false ){
   vector<double> answer;
   if( name == "SM" or name == "sm" ) answer = {1, 1, 0, 0, 0};
